@@ -1,0 +1,10 @@
+server:
+  port: 7293
+  timeout: "5s"
+db:
+  host: "localhost"
+  port: 7483
+  dbname: "messenger"
+  username: "postgres"
+  ssl_mode: "disable"
+env: "local"

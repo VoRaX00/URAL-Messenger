@@ -5,8 +5,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"log/slog"
+	"messenger/internal/domain"
+	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Handler struct {
@@ -14,21 +17,29 @@ type Handler struct {
 	wsUpg     *websocket.Upgrader
 	log       *slog.Logger
 	wsClients map[*websocket.Conn]struct{}
-	mu        sync.Mutex
+	mu        sync.RWMutex
+	broadcast chan *domain.WSMessage
 }
 
 func NewHandler(log *slog.Logger) *Handler {
 	return &Handler{
-		mux:       mux.NewRouter(),
-		log:       log,
-		wsUpg:     &websocket.Upgrader{},
+		mux: mux.NewRouter(),
+		log: log,
+		wsUpg: &websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
 		wsClients: make(map[*websocket.Conn]struct{}),
+		mu:        sync.RWMutex{},
+		broadcast: make(chan *domain.WSMessage),
 	}
 }
 
 func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
 	h.mux.HandleFunc("/test", h.testHandler)
+	go h.writeToClientsBroadcast()
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +54,6 @@ func (h *Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.wsUpg.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Error("upgrade websocket error", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	h.log.Info(fmt.Sprintf("Client with address %s connected", conn.RemoteAddr().String()))
@@ -56,5 +66,36 @@ func (h *Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) readFromClient(conn *websocket.Conn) {
+	for {
+		msg := new(domain.WSMessage)
+		if err := conn.ReadJSON(msg); err != nil {
+			h.log.Warn("Error with reading from WebSocket: ", err)
+			break
+		}
+		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			h.log.Warn("Error with address split: ", err)
+		}
 
+		msg.IPAddress = host
+		msg.Time = time.Now().Format("2006-01-02 15:04:05")
+		h.broadcast <- msg
+	}
+	h.mu.Lock()
+	delete(h.wsClients, conn)
+	h.mu.Unlock()
+}
+
+func (h *Handler) writeToClientsBroadcast() {
+	for msg := range h.broadcast {
+		h.mu.RLock()
+		for client := range h.wsClients {
+			go func(client *websocket.Conn) {
+				if err := client.WriteJSON(msg); err != nil {
+					h.log.Warn("Error with client write to clients: ", err)
+				}
+			}(client)
+		}
+		h.mu.RUnlock()
+	}
 }

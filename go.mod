@@ -4,6 +4,7 @@ go 1.23.2
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.5.0 // indirect

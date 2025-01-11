@@ -3,8 +3,11 @@ server:
   timeout: "5s"
 db:
   host: "localhost"
-  port: 7483
+  port: 6128
   dbname: "messenger"
   username: "postgres"
   ssl_mode: "disable"
+redis:
+  host: "localhost"
+  port: 6379
 env: "local"

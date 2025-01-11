@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:15
+    container_name: messenger-pg
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1324
+      POSTGRES_DB: messenger
+      PG_DATA: /var/lib/postgresql/data/
+    ports:
+      - 6128:5432
+    volumes:
+      - postgres_volume_data:/var/lib/postgresql/data/
+  redis:
+    image: redis:latest
+    container_name: messenger-redis
+    restart: always
+    volumes:
+      -  redis_volume_data:/data
+    ports:
+      - 6379:6379
+
+volumes:
+  redis_volume_data:
+  postgres_volume_data:

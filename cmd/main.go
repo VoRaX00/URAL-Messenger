@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/joho/godotenv"
 	"log/slog"
 	"messenger/internal/config"
 	"messenger/internal/wsserver"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -23,13 +26,19 @@ func main() {
 	cfg := config.MustConfig()
 	log := setupLogger(cfg.Env)
 
-	log.Info("starting server")
+	log.Info("starting application")
 	wsSrv := wsserver.NewWsServer(fmt.Sprintf("localhost:%d", cfg.Server.Port), log)
-	if err := wsSrv.Start(); err != nil {
-		log.Error("error starting server")
-		panic("Error starting server")
-	}
-	log.Info("server started")
+	go wsSrv.MustStart()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	sign := <-quit
+	log.Info("stopping application", slog.String("signal", sign.String()))
+
+	wsSrv.Stop(context.Background())
+	log.Info("application stopped")
+
 }
 
 func setupLogger(env string) *slog.Logger {

@@ -23,7 +23,9 @@ func main() {
 		panic("Error loading .env file")
 	}
 
-	cfg := config.MustConfig()
+	configPath := config.FetchConfigPath()
+	cfg := config.MustConfig[config.Config](configPath)
+	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 	log := setupLogger(cfg.Env)
 
 	log.Info("starting application")

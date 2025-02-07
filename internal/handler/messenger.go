@@ -31,6 +31,9 @@ func (h *Handler) readFromClient(conn *websocket.Conn) {
 			h.log.Warn("Error with reading from WebSocket: ", err)
 			break
 		}
+
+		h.log.Info(fmt.Sprintf("message: %v", msg.Message))
+
 		host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {
 			h.log.Warn("Error with address split: ", err)
@@ -40,6 +43,7 @@ func (h *Handler) readFromClient(conn *websocket.Conn) {
 		msg.Time = time.Now().Format("15:04")
 		h.broadcast <- msg
 	}
+
 	h.mu.Lock()
 	delete(h.wsClients, conn)
 	h.mu.Unlock()

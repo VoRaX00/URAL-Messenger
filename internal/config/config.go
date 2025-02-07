@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Env    string       `yaml:"env" env-default:"local"`
 	Server ServerConfig `yaml:"server"`
-	DB     DBConfig     `yaml:"db"`
+	DB     PGConfig     `yaml:"db"`
 }
 
 type ServerConfig struct {
@@ -18,7 +18,7 @@ type ServerConfig struct {
 	Timeout time.Duration `yaml:"timeout" env-required:"true"`
 }
 
-type DBConfig struct {
+type PGConfig struct {
 	Host     string `yaml:"host" env-required:"true"`
 	Port     int    `yaml:"port" env-required:"true"`
 	DBName   string `yaml:"dbname" env-required:"true"`
@@ -27,8 +27,12 @@ type DBConfig struct {
 	SSLMode  string `yaml:"ssl_mode" env-required:"true"`
 }
 
-func MustConfig() Config {
-	path := fetchConfigPath()
+type RedisConfig struct {
+	Host string `yaml:"host" env-required:"true"`
+	Port int    `yaml:"port" env-required:"true"`
+}
+
+func MustConfig[T any](path string) T {
 	if path == "" {
 		panic("config file path is empty")
 	}
@@ -37,17 +41,16 @@ func MustConfig() Config {
 		panic("config file not found")
 	}
 
-	var config Config
+	var config T
 	err := cleanenv.ReadConfig(path, &config)
 	if err != nil {
 		panic(err)
 	}
 
-	config.DB.Password = os.Getenv("DB_PASSWORD")
 	return config
 }
 
-func fetchConfigPath() string {
+func FetchConfigPath() string {
 	var path string
 	flag.StringVar(&path, "config", "", "path to config file")
 	flag.Parse()

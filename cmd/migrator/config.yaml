@@ -1,0 +1,10 @@
+db:
+  driver: "postgres"
+  host: "localhost"
+  port: 6732
+  db_name: "MessengerDB"
+  username: "postgres"
+  ssl_mode: "disable"
+  is_drop: false
+
+migrations_path: "./migrations"

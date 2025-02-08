@@ -10,21 +10,11 @@ import (
 type Config struct {
 	Env    string       `yaml:"env" env-default:"local"`
 	Server ServerConfig `yaml:"server"`
-	DB     PGConfig     `yaml:"db"`
 }
 
 type ServerConfig struct {
 	Port    int           `yaml:"port" env-required:"true"`
 	Timeout time.Duration `yaml:"timeout" env-required:"true"`
-}
-
-type PGConfig struct {
-	Host     string `yaml:"host" env-required:"true"`
-	Port     int    `yaml:"port" env-required:"true"`
-	DBName   string `yaml:"dbname" env-required:"true"`
-	User     string `yaml:"username" env-required:"true"`
-	Password string `yaml:"-"`
-	SSLMode  string `yaml:"ssl_mode" env-required:"true"`
 }
 
 type RedisConfig struct {

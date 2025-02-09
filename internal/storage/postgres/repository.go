@@ -7,11 +7,11 @@ import (
 )
 
 type Repository struct {
-	cfg ConfigPostgres
+	cfg Config
 	db  *sqlx.DB
 }
 
-func NewRepository(config ConfigPostgres) storage.Storage {
+func New(config Config) storage.Storage {
 	return &Repository{
 		cfg: config,
 	}

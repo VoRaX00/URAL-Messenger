@@ -26,11 +26,12 @@ func main() {
 	cfg := config.MustConfig[config.Config](configPath)
 
 	cfg.PGConfig.Password = os.Getenv("DB_PASSWORD")
+	cfg.RedisConfig.Password = os.Getenv("REDIS_PASSWORD")
 
 	log := setupLogger(cfg.Env)
 	log.Info("starting application")
 
-	application := app.New(log, cfg.Server, cfg.PGConfig)
+	application := app.New(log, cfg.Server, cfg.PGConfig, cfg.RedisConfig)
 
 	application.Start()
 

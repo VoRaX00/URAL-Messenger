@@ -20,7 +20,7 @@ type wsSrv struct {
 	log *slog.Logger
 }
 
-func NewWsServer(addr string, log *slog.Logger) WSServer {
+func New(addr string, log *slog.Logger) WSServer {
 	h := handler.NewHandler(log)
 	h.InitRoutes()
 

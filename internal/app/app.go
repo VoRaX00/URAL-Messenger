@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
-	"fmt"
 	_ "github.com/lib/pq"
 	"log/slog"
 	"messenger/internal/app/wsserver"
 	"messenger/internal/storage"
 	"messenger/internal/storage/postgres"
+	"messenger/internal/storage/redis"
 )
 
 type IApp interface {
@@ -17,20 +17,23 @@ type IApp interface {
 
 type App struct {
 	server  wsserver.WSServer
-	storage storage.Storage
+	storage []storage.Storage
 }
 
-func New(log *slog.Logger, cfgServer wsserver.ServerConfig, cfgStorage postgres.ConfigPostgres) IApp {
-	getStorage := postgres.NewRepository(cfgStorage)
-	err := getStorage.Connect()
-	if err != nil {
-		panic(err)
-	}
+func New(log *slog.Logger, cfgServer wsserver.Config, cfgPg postgres.Config, cfgRedis redis.Config) IApp {
+	pgClient := postgres.New(cfgPg)
+	pgClient.MustConnect()
 
-	wsServer := wsserver.NewWsServer(fmt.Sprintf("%s:%d", cfgServer.Addr, cfgServer.Port), log)
+	redisClient := redis.New(cfgRedis)
+	redisClient.MustConnect()
+
+	wsServer := wsserver.New(cfgServer.Addr, log)
 	return &App{
-		server:  wsServer,
-		storage: getStorage,
+		server: wsServer,
+		storage: []storage.Storage{
+			pgClient,
+			redisClient,
+		},
 	}
 }
 
@@ -39,6 +42,8 @@ func (a *App) Start() {
 }
 
 func (a *App) Stop(ctx context.Context) {
-	a.storage.MustClose()
+	for i := range a.storage {
+		a.storage[i].MustClose()
+	}
 	a.server.MustStop(ctx)
 }

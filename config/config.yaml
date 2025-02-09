@@ -1,5 +1,5 @@
 server:
-  addr: "localhost"
+  addr: "localhost:7923"
   port: 7293
   timeout: "5s"
 
@@ -11,7 +11,11 @@ postgres:
   ssl_mode: "disable"
 
 redis:
-  host: "localhost"
-  port: 6379
+  addr: "localhost:6379"
+  db: 0
+  max_retries: 3
+  dial_timeout: "10s"
+  timeout: "5s"
+
 
 env: "local"

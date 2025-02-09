@@ -5,18 +5,15 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 	"messenger/internal/app/wsserver"
 	"messenger/internal/storage/postgres"
+	"messenger/internal/storage/redis"
 	"os"
 )
 
 type Config struct {
-	Env      string                  `yaml:"env" env-default:"local"`
-	Server   wsserver.ServerConfig   `yaml:"server"`
-	PGConfig postgres.ConfigPostgres `yaml:"postgres"`
-}
-
-type RedisConfig struct {
-	Host string `yaml:"host" env-required:"true"`
-	Port int    `yaml:"port" env-required:"true"`
+	Env         string          `yaml:"env" env-default:"local"`
+	Server      wsserver.Config `yaml:"server"`
+	PGConfig    postgres.Config `yaml:"postgres"`
+	RedisConfig redis.Config    `yaml:"redis"`
 }
 
 func MustConfig[T any](path string) T {

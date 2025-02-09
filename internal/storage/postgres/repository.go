@@ -17,6 +17,13 @@ func NewRepository(config ConfigPostgres) storage.Storage {
 	}
 }
 
+func (r *Repository) MustConnect() {
+	err := r.Connect()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (r *Repository) Connect() error {
 	db, err := sqlx.Open("postgres",
 		fmt.Sprintf("host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
@@ -24,6 +31,18 @@ func (r *Repository) Connect() error {
 	if err != nil {
 		return err
 	}
+
 	r.db = db
 	return nil
+}
+
+func (r *Repository) MustClose() {
+	err := r.Close()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (r *Repository) Close() error {
+	return r.db.Close()
 }

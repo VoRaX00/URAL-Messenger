@@ -1,4 +1,5 @@
 server:
+  addr: "localhost"
   port: 7293
   timeout: "5s"
 

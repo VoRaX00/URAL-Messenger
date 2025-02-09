@@ -11,7 +11,8 @@ import (
 type WSServer interface {
 	MustStart()
 	Start() error
-	Stop(ctx context.Context)
+	MustStop(ctx context.Context)
+	Stop(ctx context.Context) error
 }
 
 type wsSrv struct {
@@ -46,12 +47,20 @@ func (s *wsSrv) Start() error {
 	return s.srv.ListenAndServe()
 }
 
-func (s *wsSrv) Stop(ctx context.Context) {
+func (s *wsSrv) MustStop(ctx context.Context) {
 	const op = "server.Stop"
 	s.log.With(slog.String("op", op)).Info("stopping server")
+	err := s.Stop(ctx)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		panic(err)
+	}
+}
 
+func (s *wsSrv) Stop(ctx context.Context) error {
 	err := s.srv.Shutdown(ctx)
 	if err != nil {
 		s.log.Error("failed to shutdown server", slog.String("error", err.Error()))
+		return err
 	}
+	return nil
 }

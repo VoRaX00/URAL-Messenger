@@ -3,18 +3,15 @@ package config
 import (
 	"flag"
 	"github.com/ilyakaznacheev/cleanenv"
+	"messenger/internal/app/wsserver"
+	"messenger/internal/storage/postgres"
 	"os"
-	"time"
 )
 
 type Config struct {
-	Env    string       `yaml:"env" env-default:"local"`
-	Server ServerConfig `yaml:"server"`
-}
-
-type ServerConfig struct {
-	Port    int           `yaml:"port" env-required:"true"`
-	Timeout time.Duration `yaml:"timeout" env-required:"true"`
+	Env      string                  `yaml:"env" env-default:"local"`
+	Server   wsserver.ServerConfig   `yaml:"server"`
+	PGConfig postgres.ConfigPostgres `yaml:"postgres"`
 }
 
 type RedisConfig struct {

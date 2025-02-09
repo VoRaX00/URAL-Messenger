@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/joho/godotenv"
 	"log/slog"
-	"messenger/internal/app/wsserver"
+	"messenger/internal/app"
 	"messenger/internal/config"
 	"os"
 	"os/signal"
@@ -25,12 +24,15 @@ func main() {
 
 	configPath := config.FetchConfigPath()
 	cfg := config.MustConfig[config.Config](configPath)
-	cfg.DB.Password = os.Getenv("DB_PASSWORD")
-	log := setupLogger(cfg.Env)
 
+	cfg.PGConfig.Password = os.Getenv("DB_PASSWORD")
+
+	log := setupLogger(cfg.Env)
 	log.Info("starting application")
-	wsSrv := wsserver.NewWsServer(fmt.Sprintf("localhost:%d", cfg.Server.Port), log)
-	go wsSrv.MustStart()
+
+	application := app.New(log, cfg.Server, cfg.PGConfig)
+
+	application.Start()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -38,9 +40,8 @@ func main() {
 	sign := <-quit
 	log.Info("stopping application", slog.String("signal", sign.String()))
 
-	wsSrv.Stop(context.Background())
+	application.Stop(context.Background())
 	log.Info("application stopped")
-
 }
 
 func setupLogger(env string) *slog.Logger {

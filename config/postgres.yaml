@@ -1,0 +1,5 @@
+host: "localhost"
+port: 6128
+dbname: "messenger"
+username: "postgres"
+ssl_mode: "disable"

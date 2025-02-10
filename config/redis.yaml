@@ -1,0 +1,5 @@
+addr: "localhost:6379"
+db: 0
+max_retries: 3
+dial_timeout: "10s"
+timeout: "5s"

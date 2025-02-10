@@ -1,0 +1,3 @@
+addr: "localhost:7923"
+port: 7293
+timeout: "5s"

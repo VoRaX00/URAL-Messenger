@@ -7,9 +7,9 @@ type Repository struct {
 	db  *redis.Client
 }
 
-func New(cfg Config) *Repository {
+func New(config Config) *Repository {
 	return &Repository{
-		cfg: cfg,
+		cfg: config,
 	}
 }
 

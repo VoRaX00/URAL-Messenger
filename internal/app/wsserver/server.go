@@ -20,14 +20,16 @@ type wsSrv struct {
 	log *slog.Logger
 }
 
-func New(addr string, log *slog.Logger) WSServer {
+func New(log *slog.Logger, config Config) WSServer {
 	h := handler.NewHandler(log)
 	h.InitRoutes()
 
 	return &wsSrv{
 		srv: &http.Server{
-			Addr:    addr,
-			Handler: h,
+			Addr:         config.Addr,
+			Handler:      h,
+			ReadTimeout:  config.Timeout,
+			WriteTimeout: config.Timeout,
 		},
 		log: log,
 	}

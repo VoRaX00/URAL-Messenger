@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"messenger/internal/app/wsserver"
 	"messenger/internal/storage"
-	"messenger/internal/storage/postgres"
-	"messenger/internal/storage/redis"
 )
 
 type IApp interface {
@@ -16,34 +14,27 @@ type IApp interface {
 }
 
 type App struct {
-	server  wsserver.WSServer
-	storage []storage.Storage
+	server   wsserver.WSServer
+	storages []storage.Storage
 }
 
-func New(log *slog.Logger, cfgServer wsserver.Config, cfgPg postgres.Config, cfgRedis redis.Config) IApp {
-	pgClient := postgres.New(cfgPg)
-	pgClient.MustConnect()
-
-	redisClient := redis.New(cfgRedis)
-	redisClient.MustConnect()
-
-	wsServer := wsserver.New(cfgServer.Addr, log)
+func New(log *slog.Logger, server wsserver.WSServer, storages ...storage.Storage) IApp {
 	return &App{
-		server: wsServer,
-		storage: []storage.Storage{
-			pgClient,
-			redisClient,
-		},
+		server:   server,
+		storages: storages,
 	}
 }
 
 func (a *App) Start() {
+	for i := range a.storages {
+		a.storages[i].MustConnect()
+	}
 	go a.server.MustStart()
 }
 
 func (a *App) Stop(ctx context.Context) {
-	for i := range a.storage {
-		a.storage[i].MustClose()
-	}
 	a.server.MustStop(ctx)
+	for i := range a.storages {
+		a.storages[i].MustClose()
+	}
 }

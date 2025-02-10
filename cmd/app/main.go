@@ -5,7 +5,11 @@ import (
 	"github.com/joho/godotenv"
 	"log/slog"
 	"messenger/internal/app"
+	"messenger/internal/app/wsserver"
 	"messenger/internal/config"
+	"messenger/internal/storage"
+	"messenger/internal/storage/postgres"
+	"messenger/internal/storage/redis"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,13 +29,15 @@ func main() {
 	configPath := config.FetchConfigPath()
 	cfg := config.MustConfig[config.Config](configPath)
 
-	cfg.PGConfig.Password = os.Getenv("DB_PASSWORD")
-	cfg.RedisConfig.Password = os.Getenv("REDIS_PASSWORD")
-
+	pgClient := setupPostgres("./config/postgres.yaml")
+	redisClient := setupRedis("./config/redis.yaml")
 	log := setupLogger(cfg.Env)
+
+	server := setupServer(log, "./config/wsserver.yaml")
+
 	log.Info("starting application")
 
-	application := app.New(log, cfg.Server, cfg.PGConfig, cfg.RedisConfig)
+	application := app.New(log, server, pgClient, redisClient)
 
 	application.Start()
 
@@ -40,9 +46,30 @@ func main() {
 
 	sign := <-quit
 	log.Info("stopping application", slog.String("signal", sign.String()))
-
 	application.Stop(context.Background())
 	log.Info("application stopped")
+}
+
+func setupServer(log *slog.Logger, configPath string) wsserver.WSServer {
+	serverConfig := config.MustConfig[wsserver.Config](configPath)
+	server := wsserver.New(log, serverConfig)
+	return server
+}
+
+func setupRedis(configPath string) storage.Storage {
+	redisCfg := config.MustConfig[redis.Config](configPath)
+	redisCfg.Password = os.Getenv("REDIS_PASSWORD")
+
+	client := redis.New(redisCfg)
+	return client
+}
+
+func setupPostgres(configPath string) storage.Storage {
+	pgCfg := config.MustConfig[postgres.Config](configPath)
+	pgCfg.Password = os.Getenv("DB_PASSWORD")
+
+	pg := postgres.New(pgCfg)
+	return pg
 }
 
 func setupLogger(env string) *slog.Logger {

@@ -3,20 +3,18 @@ package config
 import (
 	"flag"
 	"github.com/ilyakaznacheev/cleanenv"
-	"messenger/internal/app/wsserver"
-	"messenger/internal/storage/postgres"
-	"messenger/internal/storage/redis"
 	"os"
 )
 
 type Config struct {
-	Env         string          `yaml:"env" env-default:"local"`
-	Server      wsserver.Config `yaml:"server"`
-	PGConfig    postgres.Config `yaml:"postgres"`
-	RedisConfig redis.Config    `yaml:"redis"`
+	Env string `yaml:"env" env-default:"local"`
 }
 
 func MustConfig[T any](path string) T {
+	if path == "" {
+		path = os.Getenv("CONFIG_PATH")
+	}
+
 	if path == "" {
 		panic("config file path is empty")
 	}

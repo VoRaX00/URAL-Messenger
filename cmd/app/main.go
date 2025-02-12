@@ -2,14 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-redis/redis"
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	"log/slog"
 	"messenger/internal/app"
 	"messenger/internal/app/wsserver"
 	"messenger/internal/config"
+	"messenger/internal/handler"
+	"messenger/internal/services"
 	"messenger/internal/storage"
 	"messenger/internal/storage/postgres"
-	"messenger/internal/storage/redis"
+	redisrepo "messenger/internal/storage/redis"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,47 +34,80 @@ func main() {
 	configPath := config.FetchConfigPath()
 	cfg := config.MustConfig[config.Config](configPath)
 
-	pgClient := setupPostgres("./config/postgres.yaml")
-	redisClient := setupRedis("./config/redis.yaml")
-	log := setupLogger(cfg.Env)
-
-	server := setupServer(log, "./config/wsserver.yaml")
-
-	log.Info("starting application")
+	pgClient, redisClient, log, server := setupDependencies(cfg)
+	defer pgClient.Close()
+	defer redisClient.Close()
 
 	application := app.New(log, server, pgClient, redisClient)
-
-	application.Start()
+	if err := application.Start(); err != nil {
+		log.Error("error starting application", err)
+		os.Exit(1)
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	sign := <-quit
 	log.Info("stopping application", slog.String("signal", sign.String()))
-	application.Stop(context.Background())
-	log.Info("application stopped")
+	if err := application.Stop(context.Background()); err != nil {
+		log.Error("error stopping application", err)
+		os.Exit(1)
+	}
 }
 
-func setupServer(log *slog.Logger, configPath string) wsserver.WSServer {
+func setupDependencies(cfg config.Config) (*sqlx.DB, *redis.Client, *slog.Logger, wsserver.WSServer) {
+	log := setupLogger(cfg.Env)
+
+	pgClient, err := setupPostgres("./config/postgres.yaml")
+	if err != nil {
+		log.Error("failed to setup", err)
+	}
+	redisClient := setupRedis("./config/redis.yaml")
+
+	messengerRepo := postgres.NewMessengerRepo(pgClient)
+	messengerCacheRepo := redisrepo.NewMessengerCacheRepo(redisClient)
+	server := setupServer(log, messengerRepo, messengerCacheRepo, "./config/wsserver.yaml")
+	return pgClient, redisClient, log, server
+}
+
+func setupServer(log *slog.Logger,
+	messengerRepos storage.MessengerRepo, messengerCacheRepos storage.MessengerCacheRepo, configPath string) wsserver.WSServer {
 	serverConfig := config.MustConfig[wsserver.Config](configPath)
-	server := wsserver.New(log, serverConfig)
+
+	messengerService := services.NewMessenger(log, messengerCacheRepos, messengerRepos)
+	messengerHandler := handler.NewHandler(log, messengerService)
+
+	server := wsserver.New(log, messengerHandler, serverConfig)
 	return server
 }
 
-func setupRedis(configPath string) storage.Storage {
-	redisCfg := config.MustConfig[redis.Config](configPath)
+func setupRedis(configPath string) *redis.Client {
+	redisCfg := config.MustConfig[redisrepo.Config](configPath)
 	redisCfg.Password = os.Getenv("REDIS_PASSWORD")
 
-	client := redis.New(redisCfg)
-	return client
+	db := redis.NewClient(&redis.Options{
+		Addr:         redisCfg.Addr,
+		Password:     redisCfg.Password,
+		DB:           redisCfg.DB,
+		MaxRetries:   redisCfg.MaxRetries,
+		DialTimeout:  redisCfg.DialTimeout,
+		ReadTimeout:  redisCfg.Timeout,
+		WriteTimeout: redisCfg.Timeout,
+	})
+	return db
 }
 
-func setupPostgres(configPath string) storage.Storage {
+func setupPostgres(configPath string) (*sqlx.DB, error) {
 	pgCfg := config.MustConfig[postgres.Config](configPath)
 	pgCfg.Password = os.Getenv("DB_PASSWORD")
 
-	pg := postgres.New(pgCfg)
-	return pg
+	db, err := sqlx.Open("postgres",
+		fmt.Sprintf("host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
+			pgCfg.Host, pgCfg.Port, pgCfg.DBName, pgCfg.User, pgCfg.Password, pgCfg.SSLMode))
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to postgres: %w", err)
+	}
+	return db, nil
 }
 
 func setupLogger(env string) *slog.Logger {

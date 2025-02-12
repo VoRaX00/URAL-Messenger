@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"messenger/internal/handler"
 	"net/http"
+	"time"
 )
 
 type WSServer interface {
@@ -20,8 +21,7 @@ type wsSrv struct {
 	log *slog.Logger
 }
 
-func New(log *slog.Logger, config Config) WSServer {
-	h := handler.NewHandler(log)
+func New(log *slog.Logger, h *handler.Handler, config Config) WSServer {
 	h.InitRoutes()
 
 	return &wsSrv{
@@ -33,12 +33,11 @@ func New(log *slog.Logger, config Config) WSServer {
 		},
 		log: log,
 	}
-
 }
 
 func (s *wsSrv) MustStart() {
 	err := s.Start()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err != nil {
 		panic(err)
 	}
 }
@@ -46,7 +45,22 @@ func (s *wsSrv) MustStart() {
 func (s *wsSrv) Start() error {
 	const op = "server.Start"
 	s.log.With(slog.String("op", op)).Info("starting server")
-	return s.srv.ListenAndServe()
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- s.srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errChan:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.log.Error("server failed")
+			return err
+		}
+	case <-time.After(time.Second):
+		s.log.Info("server started successfully")
+	}
+	return nil
 }
 
 func (s *wsSrv) MustStop(ctx context.Context) {
@@ -59,10 +73,14 @@ func (s *wsSrv) MustStop(ctx context.Context) {
 }
 
 func (s *wsSrv) Stop(ctx context.Context) error {
+	s.log.Info("attempting graceful shutdown...")
+
 	err := s.srv.Shutdown(ctx)
 	if err != nil {
 		s.log.Error("failed to shutdown server", slog.String("error", err.Error()))
 		return err
 	}
+
+	s.log.Info("server successfully shutdown")
 	return nil
 }

@@ -1,7 +1,9 @@
 package domain
 
-type WSMessage struct {
-	IPAddress string `json:"address"`
-	Message   string `json:"message"`
-	Time      string `json:"time"`
+import "github.com/google/uuid"
+
+type MessageAdd struct {
+	PersonId uuid.UUID `json:"personId"`
+	ChatId   uuid.UUID `json:"chatId"`
+	Message  string    `json:"message"`
 }

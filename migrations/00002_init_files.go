@@ -14,7 +14,7 @@ func upFiles(ctx context.Context, tx *sql.Tx) error {
 	query := `CREATE TABLE IF NOT EXISTS files (
     	id UUID PRIMARY KEY NOT NULL,
     	file BYTEA NOT NULL,
-    	message_id UUID REFERENCES messages(id) ON DELETE CASCADE
+    	message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE
 	)`
 
 	_, err := tx.ExecContext(ctx, query)

@@ -14,7 +14,9 @@ func upMessages(ctx context.Context, tx *sql.Tx) error {
 	query := `CREATE TABLE IF NOT EXISTS messages (
     	id UUID PRIMARY KEY NOT NULL,
     	message TEXT NOT NULL,
-    	person_id UUID NOT NULL
+    	person_id UUID NOT NULL,
+    	chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    	sending_time TIMESTAMP NOT NULL
 	)`
 
 	_, err := tx.ExecContext(ctx, query)

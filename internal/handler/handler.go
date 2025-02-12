@@ -1,24 +1,27 @@
 package handler
 
 import (
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"log/slog"
-	"messenger/internal/domain"
+	"messenger/internal/domain/models"
+	"messenger/internal/services"
 	"net/http"
 	"sync"
 )
 
 type Handler struct {
-	mux       *mux.Router
-	wsUpg     *websocket.Upgrader
-	log       *slog.Logger
-	wsClients map[*websocket.Conn]struct{}
-	mu        sync.RWMutex
-	broadcast chan *domain.WSMessage
+	mux              *mux.Router
+	wsUpg            *websocket.Upgrader
+	log              *slog.Logger
+	mu               sync.RWMutex
+	messengerService services.IMessengerService
+	clients          map[uuid.UUID]*websocket.Conn
+	broadcast        chan *models.Message
 }
 
-func NewHandler(log *slog.Logger) *Handler {
+func NewHandler(log *slog.Logger, messengerService services.IMessengerService) *Handler {
 	return &Handler{
 		mux: mux.NewRouter(),
 		log: log,
@@ -27,14 +30,15 @@ func NewHandler(log *slog.Logger) *Handler {
 				return true
 			},
 		},
-		wsClients: make(map[*websocket.Conn]struct{}),
-		mu:        sync.RWMutex{},
-		broadcast: make(chan *domain.WSMessage),
+		mu:               sync.RWMutex{},
+		messengerService: messengerService,
+		broadcast:        make(chan *models.Message),
 	}
 }
 
 func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
+	h.mux.HandleFunc("/send", h.Send)
 	go h.writeToClientsBroadcast()
 }
 

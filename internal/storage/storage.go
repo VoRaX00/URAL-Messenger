@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/google/uuid"
+	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 )
 
@@ -22,6 +23,6 @@ type MessengerRepo interface {
 	Add(message models.Message) error
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
-	Update(id uuid.UUID, message string) error
+	Update(message domain.MessageUpdate) error
 	Delete(id uuid.UUID) error
 }

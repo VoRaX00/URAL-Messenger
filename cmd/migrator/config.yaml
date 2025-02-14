@@ -5,6 +5,6 @@ db:
   db_name: "messenger"
   username: "postgres"
   ssl_mode: "disable"
-  is_drop: false
+  is_drop: true
 
 migrations_path: "./migrations"

@@ -7,3 +7,9 @@ type MessageAdd struct {
 	ChatId   uuid.UUID `json:"chatId"`
 	Message  string    `json:"message"`
 }
+
+type MessageUpdate struct {
+	Id      uuid.UUID `json:"id"`
+	Message string    `json:"message"`
+	Status  string    `json:"status"`
+}

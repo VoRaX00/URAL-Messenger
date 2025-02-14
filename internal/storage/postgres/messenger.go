@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 )
 
@@ -83,7 +84,7 @@ func (m *Messenger) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
@@ -91,10 +92,10 @@ func (m *Messenger) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.
 
 func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	const op = `MessengerRepo.GetByChat`
-	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE chat_id = $1`
+	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE chat_id = $1 AND status <> $2`
 
 	var messages []models.Message
-	err := m.db.Select(messages, query, chatId)
+	err := m.db.Select(messages, query, chatId, "deleted")
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -113,10 +114,10 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	return message, nil
 }
 
-func (m *Messenger) Update(id uuid.UUID, message string) error {
+func (m *Messenger) Update(message domain.MessageUpdate) error {
 	const op = `MessengerRepo.Update`
-	query := `UPDATE messages SET message=$1 WHERE id = $2`
-	_, err := m.db.Exec(query, message, id)
+	query := `UPDATE messages SET message=$1, status=$2 WHERE id = $3`
+	_, err := m.db.Exec(query, message.Message, message.Status, message.Id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -125,8 +126,8 @@ func (m *Messenger) Update(id uuid.UUID, message string) error {
 
 func (m *Messenger) Delete(id uuid.UUID) error {
 	const op = `MessengerRepo.Delete`
-	query := `DELETE FROM messages WHERE id = $1`
-	_, err := m.db.Exec(query, id)
+	query := `UPDATE messages SET status = $1 WHERE id = $2`
+	_, err := m.db.Exec(query, "deleted", id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

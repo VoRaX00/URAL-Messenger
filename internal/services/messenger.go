@@ -14,7 +14,7 @@ type IMessengerService interface {
 	Add(message domain.MessageAdd) error
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
-	Update(id uuid.UUID, message string) error
+	Update(message domain.MessageUpdate) error
 	Delete(id uuid.UUID) error
 }
 
@@ -34,7 +34,6 @@ func NewMessenger(log *slog.Logger, cache storage.MessengerCacheRepo, repository
 
 func (m *Messenger) Add(message domain.MessageAdd) error {
 	const op = "services.messenger.Add"
-
 	log := m.log.With(
 		slog.String("op", op),
 	)
@@ -42,13 +41,22 @@ func (m *Messenger) Add(message domain.MessageAdd) error {
 	log.Info("mapping model to dto")
 	dto := mapper.MessageAddToMessage(message)
 
-	log.Info("adding message")
+	log.Info("adding message to relation db")
 	err := m.repository.Add(dto)
 	if err != nil {
-		log.Error("error with adding message", err)
+		log.Warn("error with adding message to relation db", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	log.Info("message added")
+	log.Info("message added in relation db")
+
+	log.Info("adding message to cache")
+	err = m.cache.Add(dto)
+	if err != nil {
+		log.Warn("error with adding message to cache", err)
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("message added in cache")
+
 	return nil
 }
 
@@ -61,7 +69,7 @@ func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	log.Info("getting messages for chat")
 	messages, err := m.repository.GetByChat(chatId)
 	if err != nil {
-		log.Error("error with getting messages for chat", err)
+		log.Warn("error with getting messages for chat", err)
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("messages received")
@@ -77,23 +85,23 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	log.Info("getting message")
 	message, err := m.repository.GetById(id)
 	if err != nil {
-		log.Error("error with getting message", err)
+		log.Warn("error with getting message", err)
 		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message received")
 	return message, nil
 }
 
-func (m *Messenger) Update(id uuid.UUID, message string) error {
+func (m *Messenger) Update(message domain.MessageUpdate) error {
 	const op = "services.messenger.Update"
 	log := m.log.With(
 		slog.String("op", op),
 	)
 
 	log.Info("updating message")
-	err := m.repository.Update(id, message)
+	err := m.repository.Update(message)
 	if err != nil {
-		log.Error("error with updating message", err)
+		log.Warn("error with updating message", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message updated")
@@ -109,7 +117,7 @@ func (m *Messenger) Delete(id uuid.UUID) error {
 	log.Info("deleting message")
 	err := m.repository.Delete(id)
 	if err != nil {
-		log.Error("error with deleting message", err)
+		log.Warn("error with deleting message", err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message deleted")

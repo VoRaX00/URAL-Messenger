@@ -13,6 +13,8 @@ import (
 //}
 
 type MessengerCacheRepo interface {
+	Add(message models.Message) error
+	Delete(message models.Message) error
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 }
 

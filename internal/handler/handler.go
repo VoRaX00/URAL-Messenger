@@ -38,7 +38,7 @@ func NewHandler(log *slog.Logger, messengerService services.IMessengerService) *
 
 func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
-	h.mux.HandleFunc("/send", h.Send)
+	h.mux.HandleFunc("/send", h.Send).Methods("POST")
 	go h.writeToClientsBroadcast()
 }
 

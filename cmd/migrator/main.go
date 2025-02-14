@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 	"messenger/internal/config"
 	_ "messenger/migrations"
@@ -16,6 +17,9 @@ func main() {
 	}
 
 	path := config.FetchConfigPath()
+	if path == "" {
+		panic("path is empty")
+	}
 	cfg := config.MustConfig[Config](path)
 	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 

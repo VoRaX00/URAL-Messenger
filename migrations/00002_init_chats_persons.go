@@ -13,7 +13,7 @@ func init() {
 func upChatsPersons(ctx context.Context, tx *sql.Tx) error {
 	query := `CREATE TABLE IF NOT EXISTS chats_persons (
     	chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
-    	person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+    	person_id UUID NOT NULL,
     	PRIMARY KEY (chat_id, person_id)
 	)`
 

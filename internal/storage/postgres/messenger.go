@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"messenger/internal/domain/models"
@@ -16,22 +17,118 @@ func NewMessengerRepo(db *sqlx.DB) *Messenger {
 	}
 }
 
-func (p *Messenger) Add(message models.Message) error {
-	panic("implement me")
+func (m *Messenger) Add(message models.Message) error {
+	const op = "MessengerRepo.Add"
+
+	tx, err := m.db.Beginx()
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	chatExists, err := m.checkExistsChat(tx, message.Chat.Id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if !chatExists {
+		err = m.createChat(tx, message.Chat)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	query := `INSERT INTO messages (id, message, person_id, chat_id, sending_time) VALUES ($1, $2, $3, $4, $5)`
+	_, err = m.db.Exec(query, message)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }
 
-func (p *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
-	panic("implement me")
+func (m *Messenger) checkExistsChat(tx *sqlx.Tx, chatID uuid.UUID) (bool, error) {
+	const op = "MessengerRepo.checkExistsChat"
+	query := `SELECT EXISTS (SELECT 1 FROM chats WHERE id = $1)`
+
+	var exists bool
+	if err := tx.QueryRow(query, chatID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if !exists {
+		return false, nil
+	}
+	return true, nil
 }
 
-func (p *Messenger) GetById(id uuid.UUID) (models.Message, error) {
-	panic("implement me")
+func (m *Messenger) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.UUID) error {
+	const op = "MessengerRepo.CreateChat"
+
+	query := `INSERT INTO chats (id, name) VALUES ($1, $2)`
+	_, err := tx.Exec(query, chat.Id, chat.Name)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	query = `INSERT INTO chats_persons (chat_id, person_id) VALUES ($1, $2)`
+	for _, p := range personsId {
+		_, err = tx.Exec(query, p, chat.Id)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }
 
-func (p *Messenger) Update(id uuid.UUID, message string) error {
-	panic("implement me")
+func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
+	const op = `MessengerRepo.GetByChat`
+	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE chat_id = $1`
+
+	var messages []models.Message
+	err := m.db.Select(messages, query, chatId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return messages, nil
 }
 
-func (p *Messenger) Delete(id uuid.UUID) error {
-	panic("implement me")
+func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
+	const op = `MessengerRepo.GetById`
+	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE id = $1`
+
+	var message models.Message
+	err := m.db.Get(&message, query, id)
+	if err != nil {
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return message, nil
+}
+
+func (m *Messenger) Update(id uuid.UUID, message string) error {
+	const op = `MessengerRepo.Update`
+	query := `UPDATE messages SET message=$1 WHERE id = $2`
+	_, err := m.db.Exec(query, message, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
+func (m *Messenger) Delete(id uuid.UUID) error {
+	const op = `MessengerRepo.Delete`
+	query := `DELETE FROM messages WHERE id = $1`
+	_, err := m.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }

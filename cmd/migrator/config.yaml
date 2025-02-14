@@ -1,8 +1,8 @@
 db:
   driver: "postgres"
   host: "localhost"
-  port: 6732
-  db_name: "MessengerDB"
+  port: 6128
+  db_name: "messenger"
   username: "postgres"
   ssl_mode: "disable"
   is_drop: false

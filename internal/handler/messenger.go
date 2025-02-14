@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"log/slog"
 	"messenger/internal/domain"
 	"net/http"
 )
@@ -34,7 +36,32 @@ func (h *Handler) Conn(conn *websocket.Conn) {
 }
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
+	io, err := r.GetBody()
+	if err != nil {
+		h.log.Warn("Error with reading body", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
+	var message domain.MessageAdd
+	decoder := json.NewDecoder(io)
+	err = decoder.Decode(&message)
+	if err != nil {
+		h.log.Warn("Error with decoding body", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = h.messengerService.Add(message)
+	if err != nil {
+		h.log.Warn("Error with adding message to Messenger: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	h.log.Info("Success added message to Messenger")
+	w.WriteHeader(http.StatusOK)
+	return
 }
 
 func (h *Handler) writeToClientsBroadcast() {

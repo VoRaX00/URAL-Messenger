@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"messenger/internal/domain/models"
-	"messenger/internal/services"
 	"net/http"
 	"sync"
 )
@@ -16,12 +15,12 @@ type Handler struct {
 	wsUpg            *websocket.Upgrader
 	log              *slog.Logger
 	mu               sync.RWMutex
-	messengerService services.IMessengerService
-	clients          map[uuid.UUID]*websocket.Conn
+	messengerService MessengerService
+	clients          map[uuid.UUID]map[*websocket.Conn]struct{}
 	broadcast        chan *models.Message
 }
 
-func NewHandler(log *slog.Logger, messengerService services.IMessengerService) *Handler {
+func NewHandler(log *slog.Logger, messengerService MessengerService) *Handler {
 	return &Handler{
 		mux: mux.NewRouter(),
 		log: log,
@@ -33,6 +32,7 @@ func NewHandler(log *slog.Logger, messengerService services.IMessengerService) *
 		mu:               sync.RWMutex{},
 		messengerService: messengerService,
 		broadcast:        make(chan *models.Message),
+		clients:          make(map[uuid.UUID]map[*websocket.Conn]struct{}),
 	}
 }
 

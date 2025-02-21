@@ -6,12 +6,17 @@ import (
 	"log/slog"
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
-	"messenger/internal/storage"
 	"messenger/pkg/mapper"
 )
 
-type IMessengerService interface {
-	Add(message domain.MessageAdd) error
+type MessengerCacheRepo interface {
+	Add(message models.Message) error
+	Delete(message models.Message) error
+	GetByChat(chatId uuid.UUID) ([]models.Message, error)
+}
+
+type MessengerRepo interface {
+	Add(message models.Message) (models.Message, error)
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
 	Update(message domain.MessageUpdate) error
@@ -20,11 +25,11 @@ type IMessengerService interface {
 
 type Messenger struct {
 	log        *slog.Logger
-	cache      storage.MessengerCacheRepo
-	repository storage.MessengerRepo
+	cache      MessengerCacheRepo
+	repository MessengerRepo
 }
 
-func NewMessenger(log *slog.Logger, cache storage.MessengerCacheRepo, repository storage.MessengerRepo) IMessengerService {
+func NewMessenger(log *slog.Logger, cache MessengerCacheRepo, repository MessengerRepo) *Messenger {
 	return &Messenger{
 		log:        log,
 		cache:      cache,
@@ -32,7 +37,7 @@ func NewMessenger(log *slog.Logger, cache storage.MessengerCacheRepo, repository
 	}
 }
 
-func (m *Messenger) Add(message domain.MessageAdd) error {
+func (m *Messenger) Add(message domain.MessageAdd) (models.Message, error) {
 	const op = "services.messenger.Add"
 	log := m.log.With(
 		slog.String("op", op),
@@ -42,10 +47,10 @@ func (m *Messenger) Add(message domain.MessageAdd) error {
 	dto := mapper.MessageAddToMessage(message)
 
 	log.Info("adding message to relation db")
-	err := m.repository.Add(dto)
+	msg, err := m.repository.Add(dto)
 	if err != nil {
 		log.Warn("error with adding message to relation db", err)
-		return fmt.Errorf("%s: %w", op, err)
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message added in relation db")
 
@@ -53,11 +58,11 @@ func (m *Messenger) Add(message domain.MessageAdd) error {
 	err = m.cache.Add(dto)
 	if err != nil {
 		log.Warn("error with adding message to cache", err)
-		return fmt.Errorf("%s: %w", op, err)
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message added in cache")
 
-	return nil
+	return msg, nil
 }
 
 func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {

@@ -12,7 +12,6 @@ import (
 	"messenger/internal/config"
 	"messenger/internal/handler"
 	"messenger/internal/services"
-	"messenger/internal/storage"
 	"messenger/internal/storage/postgres"
 	redisrepo "messenger/internal/storage/redis"
 	"os"
@@ -71,7 +70,7 @@ func setupDependencies(cfg config.Config) (*sqlx.DB, *redis.Client, *slog.Logger
 }
 
 func setupServer(log *slog.Logger,
-	messengerRepos storage.MessengerRepo, messengerCacheRepos storage.MessengerCacheRepo, configPath string) wsserver.WSServer {
+	messengerRepos services.MessengerRepo, messengerCacheRepos services.MessengerCacheRepo, configPath string) wsserver.WSServer {
 	serverConfig := config.MustConfig[wsserver.Config](configPath)
 
 	messengerService := services.NewMessenger(log, messengerCacheRepos, messengerRepos)

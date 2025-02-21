@@ -18,7 +18,7 @@ func NewMessengerRepo(db *sqlx.DB) *Messenger {
 	}
 }
 
-func (m *Messenger) Add(message models.Message) error {
+func (m *Messenger) Add(message models.Message) (models.Message, error) {
 	const op = "MessengerRepo.Add"
 
 	tx, err := m.db.Beginx()
@@ -29,27 +29,38 @@ func (m *Messenger) Add(message models.Message) error {
 	}()
 
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	chatExists, err := m.checkExistsChat(tx, message.Chat.Id)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	if !chatExists {
 		err = m.createChat(tx, message.Chat)
 		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+			return models.Message{}, fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
 	query := `INSERT INTO messages (id, message, person_id, chat_id, sending_time) VALUES ($1, $2, $3, $4, $5)`
 	_, err = m.db.Exec(query, message)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
-	return nil
+
+	msg, err := m.GetById(message.Id)
+	if err != nil {
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return models.Message{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return msg, nil
 }
 
 func (m *Messenger) checkExistsChat(tx *sqlx.Tx, chatID uuid.UUID) (bool, error) {

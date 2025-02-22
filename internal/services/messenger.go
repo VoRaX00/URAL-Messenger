@@ -9,12 +9,14 @@ import (
 	"messenger/pkg/mapper"
 )
 
+//go:generate mockery --name=MessengerCacheRepo --output=./mocks --case=underscore
 type MessengerCacheRepo interface {
 	Add(message models.Message) error
 	Delete(message models.Message) error
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 }
 
+//go:generate mockery --name=MessengerRepo --output=./mocks --case=underscore
 type MessengerRepo interface {
 	Add(message models.Message) (models.Message, error)
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
@@ -50,7 +52,7 @@ func (m *Messenger) Add(message domain.MessageAdd) (models.Message, error) {
 	log.Info("adding message to relation db")
 	msg, err := m.repository.Add(dto)
 	if err != nil {
-		log.Warn("error with adding message to relation db", err)
+		log.Error("error with adding message to relation db", slog.String("err", err.Error()))
 		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message added in relation db")
@@ -58,7 +60,7 @@ func (m *Messenger) Add(message domain.MessageAdd) (models.Message, error) {
 	log.Info("adding message to cache")
 	err = m.cache.Add(dto)
 	if err != nil {
-		log.Warn("error with adding message to cache", err)
+		log.Error("error with adding message to cache", slog.String("err", err.Error()))
 		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message added in cache")
@@ -75,7 +77,7 @@ func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	log.Info("getting messages for chat")
 	messages, err := m.repository.GetByChat(chatId)
 	if err != nil {
-		log.Warn("error with getting messages for chat", err)
+		log.Error("error with getting messages for chat", slog.String("err", err.Error()))
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("messages received")
@@ -91,7 +93,7 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	log.Info("getting message")
 	message, err := m.repository.GetById(id)
 	if err != nil {
-		log.Warn("error with getting message", err)
+		log.Error("error with getting message", slog.String("err", err.Error()))
 		return models.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message received")
@@ -107,7 +109,7 @@ func (m *Messenger) Update(message domain.MessageUpdate) error {
 	log.Info("updating message")
 	err := m.repository.Update(message)
 	if err != nil {
-		log.Warn("error with updating message", err)
+		log.Error("error with updating message", slog.String("err", err.Error()))
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message updated")
@@ -139,7 +141,7 @@ func (m *Messenger) Delete(id uuid.UUID) error {
 	log.Info("deleting message")
 	err := m.repository.Delete(id)
 	if err != nil {
-		log.Warn("error with deleting message", err)
+		log.Error("error with deleting message", slog.String("err", err.Error()))
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("message deleted")

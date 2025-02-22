@@ -11,4 +11,5 @@ type Message struct {
 	Chat        Chat      `json:"chat" db:"chat"`
 	MessageText string    `json:"message" db:"message"`
 	SendingTime time.Time `json:"time" db:"time"`
+	Status      string    `json:"status" db:"status"`
 }

@@ -14,3 +14,11 @@ func MessageAddToMessage(message domain.MessageAdd) models.Message {
 		MessageText: message.Message,
 	}
 }
+
+func MessageUpdateToMessage(message domain.MessageUpdate) models.Message {
+	return models.Message{
+		Id:          message.Id,
+		MessageText: message.Message,
+		Status:      message.Status,
+	}
+}

@@ -22,7 +22,7 @@ type MessengerRepo interface {
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
-	Update(message domain.MessageUpdate) error
+	Update(message models.Message) error
 	Delete(id uuid.UUID) error
 }
 
@@ -106,8 +106,11 @@ func (m *Messenger) Update(message domain.MessageUpdate) error {
 		slog.String("op", op),
 	)
 
+	log.Info("mapping model to dto")
+	dto := mapper.MessageUpdateToMessage(message)
+
 	log.Info("updating message")
-	err := m.repository.Update(message)
+	err := m.repository.Update(dto)
 	if err != nil {
 		log.Error("error with updating message", slog.String("err", err.Error()))
 		return fmt.Errorf("%s: %w", op, err)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 )
 
@@ -136,10 +135,10 @@ func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	return chats, nil
 }
 
-func (m *Messenger) Update(message domain.MessageUpdate) error {
+func (m *Messenger) Update(message models.Message) error {
 	const op = `MessengerRepo.Update`
 	query := `UPDATE messages SET message=$1, status=$2 WHERE id = $3`
-	_, err := m.db.Exec(query, message.Message, message.Status, message.Id)
+	_, err := m.db.Exec(query, message.MessageText, message, message.Id)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

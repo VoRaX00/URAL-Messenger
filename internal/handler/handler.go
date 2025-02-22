@@ -16,7 +16,7 @@ type Handler struct {
 	log              *slog.Logger
 	mu               sync.RWMutex
 	messengerService MessengerService
-	clients          map[uuid.UUID]map[*websocket.Conn]struct{}
+	clients          map[uuid.UUID]map[uuid.UUID]*websocket.Conn
 	broadcast        chan *models.Message
 }
 
@@ -32,7 +32,7 @@ func NewHandler(log *slog.Logger, messengerService MessengerService) *Handler {
 		mu:               sync.RWMutex{},
 		messengerService: messengerService,
 		broadcast:        make(chan *models.Message),
-		clients:          make(map[uuid.UUID]map[*websocket.Conn]struct{}),
+		clients:          make(map[uuid.UUID]map[uuid.UUID]*websocket.Conn),
 	}
 }
 

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"log/slog"
@@ -18,6 +17,7 @@ type MessengerService interface {
 	GetById(id uuid.UUID) (models.Message, error)
 	Update(message domain.MessageUpdate) error
 	Delete(id uuid.UUID) error
+	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 }
 
 func (h *Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -26,11 +26,37 @@ func (h *Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
 		h.log.Error("upgrade websocket error", "error", err)
 		return
 	}
-	h.log.Info(fmt.Sprintf("Client with address %s connected", conn.RemoteAddr().String()))
-	go h.Conn(conn)
+
+	userID, err := uuid.Parse(r.URL.Query().Get("user_id"))
+	if err != nil {
+		h.log.Error("parse user id error", slog.String("err", err.Error()))
+		conn.Close()
+		return
+	}
+
+	chatIds, err := h.getUserChats(userID)
+	if err != nil {
+		h.log.Error("get user chats error", slog.String("err", err.Error()))
+		conn.Close()
+		return
+	}
+
+	h.mu.Lock()
+	for _, chatId := range chatIds {
+		if h.clients[chatId] == nil {
+			h.clients[chatId] = make(map[uuid.UUID]*websocket.Conn)
+		}
+		h.clients[chatId][userID] = conn
+	}
+	h.mu.Unlock()
+
+	go h.Conn(conn, userID)
 }
 
-func (h *Handler) Conn(conn *websocket.Conn) {
+func (h *Handler) Conn(conn *websocket.Conn, userId uuid.UUID) {
+	defer func() {
+		h.disconnection(conn, userId)
+	}()
 
 	for {
 		msg := new(domain.MessageAdd)
@@ -44,24 +70,25 @@ func (h *Handler) Conn(conn *websocket.Conn) {
 			h.log.Warn("Error with adding message to Messenger: ", slog.String("err", err.Error()))
 		}
 
-		h.mu.RLock()
-		_, ok := h.clients[addedMsg.Chat.Id]
-		if !ok {
-			h.clients[addedMsg.Chat.Id] = make(map[*websocket.Conn]struct{})
-		}
-		h.clients[addedMsg.Chat.Id][conn] = struct{}{}
-		h.mu.RUnlock()
-
 		h.broadcast <- &addedMsg
 		go h.writeToClientsBroadcast()
 	}
+}
 
-	for key := range h.clients {
-		if _, ok := h.clients[key][conn]; ok {
-			delete(h.clients[key], conn)
+func (h *Handler) disconnection(conn *websocket.Conn, userId uuid.UUID) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for chatId, subscribers := range h.clients {
+		if _, ok := subscribers[userId]; ok {
+			delete(h.clients, chatId)
+			if len(h.clients) == 0 {
+				delete(h.clients, chatId)
+			}
 		}
 	}
-
+	conn.Close()
+	h.log.Info("close websocket connection")
 }
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
@@ -98,12 +125,24 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeToClientsBroadcast() {
 	for msg := range h.broadcast {
 		h.mu.RLock()
-		clients := h.clients[msg.Chat.Id]
-		for client, _ := range clients {
-			if err := client.WriteJSON(msg); err != nil {
-				h.log.Warn("Error with adding message to Messenger: ", slog.String("err", err.Error()))
+		sub, ok := h.clients[msg.Chat.Id]
+		if ok {
+			for _, client := range sub {
+				if err := client.WriteJSON(msg); err != nil {
+					h.log.Warn("Error with adding message to Messenger: ", slog.String("err", err.Error()))
+				}
 			}
 		}
 		h.mu.RUnlock()
 	}
+}
+
+func (h *Handler) getUserChats(userID uuid.UUID) ([]uuid.UUID, error) {
+	h.log.Info("getting chats for user")
+	chats, err := h.messengerService.GetUserChats(userID)
+	if err != nil {
+		h.log.Warn("Error with getting chats for user: ", slog.String("err", err.Error()))
+	}
+	h.log.Info("got chats for user")
+	return chats, nil
 }

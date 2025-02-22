@@ -121,6 +121,36 @@ func (_m *MessengerService) GetById(id uuid.UUID) (models.Message, error) {
 	return r0, r1
 }
 
+// GetUserChats provides a mock function with given fields: userId
+func (_m *MessengerService) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
+	ret := _m.Called(userId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserChats")
+	}
+
+	var r0 []uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) ([]uuid.UUID, error)); ok {
+		return rf(userId)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) []uuid.UUID); ok {
+		r0 = rf(userId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(userId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: message
 func (_m *MessengerService) Update(message domain.MessageUpdate) error {
 	ret := _m.Called(message)

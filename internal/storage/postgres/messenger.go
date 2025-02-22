@@ -125,6 +125,17 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	return message, nil
 }
 
+func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
+	const op = `MessengerRepo.GetUserChats`
+	query := `SELECT chat_id FROM chats_persons WHERE person_id = $1`
+	var chats []uuid.UUID
+	err := m.db.Select(&chats, query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return chats, nil
+}
+
 func (m *Messenger) Update(message domain.MessageUpdate) error {
 	const op = `MessengerRepo.Update`
 	query := `UPDATE messages SET message=$1, status=$2 WHERE id = $3`

@@ -19,6 +19,7 @@ type MessengerRepo interface {
 	Add(message models.Message) (models.Message, error)
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
+	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 	Update(message domain.MessageUpdate) error
 	Delete(id uuid.UUID) error
 }
@@ -111,6 +112,22 @@ func (m *Messenger) Update(message domain.MessageUpdate) error {
 	}
 	log.Info("message updated")
 	return nil
+}
+
+func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
+	const op = "services.messenger.GetUserChats"
+	log := m.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("getting chats for user")
+	chats, err := m.repository.GetUserChats(userId)
+	if err != nil {
+		log.Error("error with getting chats for user:", slog.String("err", err.Error()))
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("chats received")
+	return chats, nil
 }
 
 func (m *Messenger) Delete(id uuid.UUID) error {

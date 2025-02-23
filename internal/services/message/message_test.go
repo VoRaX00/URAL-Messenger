@@ -1,4 +1,4 @@
-package services
+package message
 
 import (
 	"github.com/google/uuid"
@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
-	"messenger/internal/services/mocks"
+	mocks2 "messenger/internal/services/message/mocks"
 	"os"
 	"testing"
 	"time"
@@ -21,10 +21,10 @@ func TestMessenger_Add(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	mockMessengerRepo := mocks.NewMessengerRepo(t)
-	mockMessengerCacheRepo := mocks.NewMessengerCacheRepo(t)
+	mockMessengerRepo := mocks2.NewMessengerRepo(t)
+	mockMessengerCacheRepo := mocks2.NewMessengerCacheRepo(t)
 
-	service := &Messenger{
+	service := &Service{
 		log:        slog.New(logHandler),
 		cache:      mockMessengerCacheRepo,
 		repository: mockMessengerRepo,
@@ -109,10 +109,10 @@ func TestMessenger_GetByChat(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	mockMessengerRepo := mocks.NewMessengerRepo(t)
-	mockMessengerCacheRepo := mocks.NewMessengerCacheRepo(t)
+	mockMessengerRepo := mocks2.NewMessengerRepo(t)
+	mockMessengerCacheRepo := mocks2.NewMessengerCacheRepo(t)
 
-	service := &Messenger{
+	service := &Service{
 		log:        slog.New(logHandler),
 		cache:      mockMessengerCacheRepo,
 		repository: mockMessengerRepo,
@@ -165,11 +165,11 @@ func TestMessenger_GetById(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	mockMessengerRepo := mocks.NewMessengerRepo(t)
+	mockMessengerRepo := mocks2.NewMessengerRepo(t)
 
 	msgId := uuid.New()
 
-	service := &Messenger{
+	service := &Service{
 		log:        slog.New(logHandler),
 		cache:      nil,
 		repository: mockMessengerRepo,
@@ -222,7 +222,7 @@ func TestMessenger_Update(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	mockMessengerRepo := mocks.NewMessengerRepo(t)
+	mockMessengerRepo := mocks2.NewMessengerRepo(t)
 	msgId := uuid.New()
 	msg := domain.MessageUpdate{
 		Id:      msgId,
@@ -230,7 +230,7 @@ func TestMessenger_Update(t *testing.T) {
 		Status:  "not read",
 	}
 
-	service := &Messenger{
+	service := &Service{
 		log:        slog.New(logHandler),
 		cache:      nil,
 		repository: mockMessengerRepo,
@@ -278,10 +278,10 @@ func TestMessenger_Delete(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	mockMessengerRepo := mocks.NewMessengerRepo(t)
+	mockMessengerRepo := mocks2.NewMessengerRepo(t)
 	msgId := uuid.New()
 
-	service := &Messenger{
+	service := &Service{
 		log:        slog.New(logHandler),
 		cache:      nil,
 		repository: mockMessengerRepo,

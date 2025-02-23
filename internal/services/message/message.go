@@ -1,4 +1,4 @@
-package services
+package message
 
 import (
 	"fmt"
@@ -9,38 +9,37 @@ import (
 	"messenger/pkg/mapper"
 )
 
-//go:generate mockery --name=MessengerCacheRepo --output=./mocks --case=underscore
-type MessengerCacheRepo interface {
+//go:generate mockery --name=CacheRepository --output=./mocks --case=underscore
+type CacheRepository interface {
 	Add(message models.Message) error
 	Delete(message models.Message) error
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 }
 
-//go:generate mockery --name=MessengerRepo --output=./mocks --case=underscore
-type MessengerRepo interface {
+//go:generate mockery --name=Repository --output=./mocks --case=underscore
+type Repository interface {
 	Add(message models.Message) (models.Message, error)
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)
-	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 	Update(message models.Message) error
 	Delete(id uuid.UUID) error
 }
 
-type Messenger struct {
+type Service struct {
 	log        *slog.Logger
-	cache      MessengerCacheRepo
-	repository MessengerRepo
+	cache      CacheRepository
+	repository Repository
 }
 
-func NewMessenger(log *slog.Logger, cache MessengerCacheRepo, repository MessengerRepo) *Messenger {
-	return &Messenger{
+func NewMessageService(log *slog.Logger, cache CacheRepository, repository Repository) *Service {
+	return &Service{
 		log:        log,
 		cache:      cache,
 		repository: repository,
 	}
 }
 
-func (m *Messenger) Add(message domain.MessageAdd) (models.Message, error) {
+func (m *Service) Add(message domain.MessageAdd) (models.Message, error) {
 	const op = "services.messenger.Add"
 	log := m.log.With(
 		slog.String("op", op),
@@ -68,7 +67,7 @@ func (m *Messenger) Add(message domain.MessageAdd) (models.Message, error) {
 	return msg, nil
 }
 
-func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
+func (m *Service) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	const op = "services.messenger.GetByChat"
 	log := m.log.With(
 		slog.String("op", op),
@@ -84,7 +83,7 @@ func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	return messages, nil
 }
 
-func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
+func (m *Service) GetById(id uuid.UUID) (models.Message, error) {
 	const op = "services.messenger.GetById"
 	log := m.log.With(
 		slog.String("op", op),
@@ -100,7 +99,7 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	return message, nil
 }
 
-func (m *Messenger) Update(message domain.MessageUpdate) error {
+func (m *Service) Update(message domain.MessageUpdate) error {
 	const op = "services.messenger.Update"
 	log := m.log.With(
 		slog.String("op", op),
@@ -119,23 +118,7 @@ func (m *Messenger) Update(message domain.MessageUpdate) error {
 	return nil
 }
 
-func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
-	const op = "services.messenger.GetUserChats"
-	log := m.log.With(
-		slog.String("op", op),
-	)
-
-	log.Info("getting chats for user")
-	chats, err := m.repository.GetUserChats(userId)
-	if err != nil {
-		log.Error("error with getting chats for user:", slog.String("err", err.Error()))
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-	log.Info("chats received")
-	return chats, nil
-}
-
-func (m *Messenger) Delete(id uuid.UUID) error {
+func (m *Service) Delete(id uuid.UUID) error {
 	const op = "services.messenger.Delete"
 	log := m.log.With(
 		slog.String("op", op),

@@ -7,17 +7,17 @@ import (
 	"messenger/internal/domain/models"
 )
 
-type Messenger struct {
+type MessageRepository struct {
 	db *sqlx.DB
 }
 
-func NewMessengerRepo(db *sqlx.DB) *Messenger {
-	return &Messenger{
+func NewMessageRepository(db *sqlx.DB) *MessageRepository {
+	return &MessageRepository{
 		db: db,
 	}
 }
 
-func (m *Messenger) Add(message models.Message) (models.Message, error) {
+func (m *MessageRepository) Add(message models.Message) (models.Message, error) {
 	const op = "MessengerRepo.Add"
 
 	tx, err := m.db.Beginx()
@@ -62,7 +62,7 @@ func (m *Messenger) Add(message models.Message) (models.Message, error) {
 	return msg, nil
 }
 
-func (m *Messenger) checkExistsChat(tx *sqlx.Tx, chatID uuid.UUID) (bool, error) {
+func (m *MessageRepository) checkExistsChat(tx *sqlx.Tx, chatID uuid.UUID) (bool, error) {
 	const op = "MessengerRepo.checkExistsChat"
 	query := `SELECT EXISTS (SELECT 1 FROM chats WHERE id = $1)`
 
@@ -77,7 +77,7 @@ func (m *Messenger) checkExistsChat(tx *sqlx.Tx, chatID uuid.UUID) (bool, error)
 	return true, nil
 }
 
-func (m *Messenger) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.UUID) error {
+func (m *MessageRepository) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.UUID) error {
 	const op = "MessengerRepo.CreateChat"
 
 	query := `INSERT INTO chats (id, name) VALUES ($1, $2)`
@@ -100,7 +100,7 @@ func (m *Messenger) createChat(tx *sqlx.Tx, chat models.Chat, personsId ...uuid.
 	return nil
 }
 
-func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
+func (m *MessageRepository) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	const op = `MessengerRepo.GetByChat`
 	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE chat_id = $1 AND status <> $2`
 
@@ -112,7 +112,7 @@ func (m *Messenger) GetByChat(chatId uuid.UUID) ([]models.Message, error) {
 	return messages, nil
 }
 
-func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
+func (m *MessageRepository) GetById(id uuid.UUID) (models.Message, error) {
 	const op = `MessengerRepo.GetById`
 	query := `SELECT id, message, person_id, chat_id, sending_time FROM messages WHERE id = $1`
 
@@ -124,7 +124,7 @@ func (m *Messenger) GetById(id uuid.UUID) (models.Message, error) {
 	return message, nil
 }
 
-func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
+func (m *MessageRepository) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	const op = `MessengerRepo.GetUserChats`
 	query := `SELECT chat_id FROM chats_persons WHERE person_id = $1`
 	var chats []uuid.UUID
@@ -135,7 +135,7 @@ func (m *Messenger) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	return chats, nil
 }
 
-func (m *Messenger) Update(message models.Message) error {
+func (m *MessageRepository) Update(message models.Message) error {
 	const op = `MessengerRepo.Update`
 	query := `UPDATE messages SET message=$1, status=$2 WHERE id = $3`
 	_, err := m.db.Exec(query, message.MessageText, message, message.Id)
@@ -145,7 +145,7 @@ func (m *Messenger) Update(message models.Message) error {
 	return nil
 }
 
-func (m *Messenger) Delete(id uuid.UUID) error {
+func (m *MessageRepository) Delete(id uuid.UUID) error {
 	const op = `MessengerRepo.Delete`
 	query := `UPDATE messages SET status = $1 WHERE id = $2`
 	_, err := m.db.Exec(query, "deleted", id)

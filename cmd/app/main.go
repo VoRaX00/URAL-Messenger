@@ -11,9 +11,10 @@ import (
 	"messenger/internal/app/wsserver"
 	"messenger/internal/config"
 	"messenger/internal/handler"
-	"messenger/internal/services"
-	"messenger/internal/storage/postgres"
-	redisrepo "messenger/internal/storage/redis"
+	"messenger/internal/services/chat"
+	"messenger/internal/services/message"
+	"messenger/internal/storages/postgres"
+	redisrepo "messenger/internal/storages/redis"
 	"os"
 	"os/signal"
 	"syscall"
@@ -63,18 +64,26 @@ func setupDependencies(cfg config.Config) (*sqlx.DB, *redis.Client, *slog.Logger
 	}
 	redisClient := setupRedis("./config/redis.yaml")
 
-	messengerRepo := postgres.NewMessengerRepo(pgClient)
-	messengerCacheRepo := redisrepo.NewMessengerCacheRepo(redisClient)
-	server := setupServer(log, messengerRepo, messengerCacheRepo, "./config/wsserver.yaml")
+	messageRepo := postgres.NewMessageRepository(pgClient)
+	messageCacheRepo := redisrepo.NewMessageRepository(redisClient)
+	chatRepo := postgres.NewChatRepository(pgClient)
+	chatCacheRepo := redisrepo.NewChatRepository(redisClient)
+
+	server := setupServer(log, messageRepo, messageCacheRepo,
+		chatRepo, chatCacheRepo, "./config/wsserver.yaml")
+
 	return pgClient, redisClient, log, server
 }
 
 func setupServer(log *slog.Logger,
-	messengerRepos services.MessengerRepo, messengerCacheRepos services.MessengerCacheRepo, configPath string) wsserver.WSServer {
+	messageRepository message.Repository, messageCacheRepository message.CacheRepository,
+	chatRepository chat.Repository, chatCacheRepository chat.CacheRepository,
+	configPath string) wsserver.WSServer {
 	serverConfig := config.MustConfig[wsserver.Config](configPath)
 
-	messengerService := services.NewMessenger(log, messengerCacheRepos, messengerRepos)
-	messengerHandler := handler.NewHandler(log, messengerService)
+	messageService := message.NewMessageService(log, messageCacheRepository, messageRepository)
+	chatService := chat.NewChat(log, chatRepository, chatCacheRepository)
+	messengerHandler := handler.NewHandler(log, messageService, chatService)
 
 	server := wsserver.New(log, messengerHandler, serverConfig)
 	return server

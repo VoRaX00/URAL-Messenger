@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"messenger/internal/domain"
@@ -29,7 +30,15 @@ func (c *ChatRepository) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
 }
 
 func (c *ChatRepository) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
-	panic("implement me")
+	const op = `ChatRepository.GetUserChats`
+	query := `SELECT chat_id FROM chats_persons WHERE person_id = $1`
+
+	var chats []uuid.UUID
+	err := c.db.Select(&chats, query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return chats, nil
 }
 
 func (c *ChatRepository) Update(chatId uuid.UUID) error {

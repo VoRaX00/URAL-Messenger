@@ -13,21 +13,29 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestWsConnection(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
 
 	userId := uuid.New()
 
-	mockMessengerService := mocks.NewMessengerService(t)
-	mockMessengerService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{}, nil)
+	mockMessengerService := mocks.NewMessageService(t)
+	mockChatService := mocks.NewChatService(t)
+	mockChatService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{}, nil).
+		Run(func(args mock.Arguments) {
+			wg.Done()
+		})
 
-	h := NewHandler(slog.New(logHandler), mockMessengerService)
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
 	h.InitRoutes()
 
 	server := httptest.NewServer(h)
@@ -37,9 +45,15 @@ func TestWsConnection(t *testing.T) {
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	require.NoError(t, err)
 	conn.Close()
+
+	wg.Wait()
+	mockMessengerService.AssertExpectations(t)
 }
 
 func TestWsWrite_Success(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
@@ -48,20 +62,23 @@ func TestWsWrite_Success(t *testing.T) {
 	textMsg := "Hello tests"
 	chatId := uuid.New()
 
-	mockMessengerService := mocks.NewMessengerService(t)
+	mockMessengerService := mocks.NewMessageService(t)
 	mockMessengerService.On("Add", mock.AnythingOfType("domain.MessageAdd")).Return(models.Message{
 		PersonId:    person1,
 		MessageText: textMsg,
 		Chat: models.Chat{
 			Id: chatId,
 		},
-	}, nil)
+	}, nil).Run(func(args mock.Arguments) {
+		wg.Done()
+	})
 
-	mockMessengerService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{
+	mockChatService := mocks.NewChatService(t)
+	mockChatService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{
 		chatId,
 	}, nil)
 
-	h := NewHandler(slog.New(logHandler), mockMessengerService)
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
 	h.InitRoutes()
 
 	server := httptest.NewServer(h)
@@ -79,6 +96,9 @@ func TestWsWrite_Success(t *testing.T) {
 	}
 	err = conn.WriteJSON(msg)
 	require.NoError(t, err)
+
+	wg.Wait()
+	mockMessengerService.AssertExpectations(t)
 }
 
 func TestWsWriteReadForOneChat_Success(t *testing.T) {
@@ -91,7 +111,7 @@ func TestWsWriteReadForOneChat_Success(t *testing.T) {
 	textMsg := "Hello tests"
 	chatId := uuid.New()
 
-	mockMessengerService := mocks.NewMessengerService(t)
+	mockMessengerService := mocks.NewMessageService(t)
 	mockMessengerService.On("Add", mock.AnythingOfType("domain.MessageAdd")).Return(models.Message{
 		PersonId:    person1,
 		MessageText: textMsg,
@@ -100,11 +120,12 @@ func TestWsWriteReadForOneChat_Success(t *testing.T) {
 		},
 	}, nil)
 
-	mockMessengerService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{
+	mockChatService := mocks.NewChatService(t)
+	mockChatService.On("GetUserChats", mock.AnythingOfType("uuid.UUID")).Return([]uuid.UUID{
 		chatId,
 	}, nil)
 
-	h := NewHandler(slog.New(logHandler), mockMessengerService)
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
 	h.InitRoutes()
 
 	server := httptest.NewServer(h)

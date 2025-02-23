@@ -15,13 +15,13 @@ type Handler struct {
 	wsUpg          *websocket.Upgrader
 	log            *slog.Logger
 	mu             sync.RWMutex
-	messageService MessengerService
+	messageService MessageService
 	chatService    ChatService
 	clients        map[uuid.UUID]map[uuid.UUID]*websocket.Conn
 	broadcast      chan *models.Message
 }
 
-func NewHandler(log *slog.Logger, messengerService MessengerService, chatService ChatService) *Handler {
+func NewHandler(log *slog.Logger, messengerService MessageService, chatService ChatService) *Handler {
 	return &Handler{
 		mux: mux.NewRouter(),
 		log: log,

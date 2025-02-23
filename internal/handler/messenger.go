@@ -11,8 +11,8 @@ import (
 	"net/http"
 )
 
-//go:generate mockery --name=MessengerService --output=./mocks --case=underscore
-type MessengerService interface {
+//go:generate mockery --name=MessageService --output=./mocks --case=underscore
+type MessageService interface {
 	Add(message domain.MessageAdd) (models.Message, error)
 	GetByChat(chatId uuid.UUID) ([]models.Message, error)
 	GetById(id uuid.UUID) (models.Message, error)

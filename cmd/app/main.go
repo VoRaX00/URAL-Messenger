@@ -82,7 +82,7 @@ func setupServer(log *slog.Logger,
 	serverConfig := config.MustConfig[wsserver.Config](configPath)
 
 	messageService := message.NewMessageService(log, messageCacheRepository, messageRepository)
-	chatService := chat.NewChat(log, chatRepository, chatCacheRepository)
+	chatService := chat.NewChatService(log, chatRepository, chatCacheRepository)
 	messengerHandler := handler.NewHandler(log, messageService, chatService)
 
 	server := wsserver.New(log, messengerHandler, serverConfig)

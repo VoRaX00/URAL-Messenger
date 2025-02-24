@@ -30,7 +30,7 @@ type Service struct {
 	cacheRepository CacheRepository
 }
 
-func NewChat(log *slog.Logger, repository Repository, cacheRepository CacheRepository) *Service {
+func NewChatService(log *slog.Logger, repository Repository, cacheRepository CacheRepository) *Service {
 	return &Service{
 		log:             log,
 		repository:      repository,

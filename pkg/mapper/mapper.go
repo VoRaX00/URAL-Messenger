@@ -22,3 +22,9 @@ func MessageUpdateToMessage(message domain.MessageUpdate) models.Message {
 		Status:      message.Status,
 	}
 }
+
+func AddChatToChat(chat domain.AddChat) models.Chat {
+	return models.Chat{
+		Name: chat.Name,
+	}
+}

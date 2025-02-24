@@ -42,7 +42,7 @@ func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
 	h.mux.HandleFunc("/chat/add", h.addChat).Methods("POST")
 	h.mux.HandleFunc("/chat/persons/add", h.addNewUserChat).Methods("POST")
-	h.mux.HandleFunc("/send", h.Send).Methods("POST")
+	h.mux.HandleFunc("/send", h.send).Methods("POST")
 	go h.writeToClientsBroadcast()
 }
 

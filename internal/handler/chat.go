@@ -7,13 +7,29 @@ import (
 	"github.com/gorilla/websocket"
 	"log/slog"
 	"messenger/internal/domain"
+	"messenger/internal/domain/models"
 	"net/http"
 )
 
+//go:generate mockery --name=ChatService --output=./mocks --case=underscore
+type ChatService interface {
+	Add(chat domain.AddChat) (uuid.UUID, error)
+	AddNewUser(chatId uuid.UUID, userId uuid.UUID) error
+	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
+	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
+	Update(chat models.Chat) error
+	Delete(chatId uuid.UUID) error
+}
+
 func (h *Handler) addChat(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.addChat"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
 	io, err := r.GetBody()
 	if err != nil {
-		h.log.Error("Error with reading body", slog.String("err", err.Error()))
+		log.Error("Error with reading body", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -22,14 +38,14 @@ func (h *Handler) addChat(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(io)
 	err = decoder.Decode(&chat)
 	if err != nil {
-		h.log.Error("Error with decoding body", slog.String("err", err.Error()))
+		log.Error("Error with decoding body", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	chatId, err := h.chatService.Add(chat)
 	if err != nil {
-		h.log.Error("Error with creating chat", slog.String("err", err.Error()))
+		log.Error("Error with creating chat", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -47,18 +63,18 @@ func (h *Handler) addChat(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(fmt.Sprintf("id: %v", chatId)))
 	if err != nil {
-		h.log.Error("Error writing response", slog.String("err", err.Error()))
+		log.Error("Error writing response", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	h.log.Info("Success added chat to Messenger")
+	log.Info("Success added chat to Messenger")
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) addNewUserChat(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.addNewUserChat"
-	log := slog.With(
+	log := h.log.With(
 		slog.String("op", op),
 	)
 
@@ -89,11 +105,16 @@ func (h *Handler) addNewUserChat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getUserChats(userID uuid.UUID) ([]uuid.UUID, error) {
-	h.log.Info("getting chats for user")
+	const op = "handler.getUserChats"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("getting chats for user")
 	chats, err := h.chatService.GetUserChats(userID)
 	if err != nil {
-		h.log.Warn("Error with getting chats for user: ", slog.String("err", err.Error()))
+		log.Error("Error with getting chats for user: ", slog.String("err", err.Error()))
 	}
-	h.log.Info("got chats for user")
+	log.Info("got chats for user")
 	return chats, nil
 }

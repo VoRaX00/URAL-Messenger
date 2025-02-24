@@ -26,7 +26,7 @@ type ChatService interface {
 	AddNewUser(chatId uuid.UUID, userId uuid.UUID) error
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
-	Update(chatId uuid.UUID) error
+	Update(chat models.Chat) error
 	Delete(chatId uuid.UUID) error
 }
 

@@ -5,20 +5,21 @@ import (
 	"github.com/google/uuid"
 	"log/slog"
 	"messenger/internal/domain"
+	"messenger/internal/domain/models"
 )
 
 //go:generate mockery --name=CacheRepository --output=./mocks --case=underscore
 type CacheRepository interface {
-	Add(chat domain.AddChat) error
+	Add(chat models.Chat, personIds []uuid.UUID) error
 }
 
 //go:generate mockery --name=Repository --output=./mocks --case=underscore
 type Repository interface {
-	Add(chat domain.AddChat) (uuid.UUID, error)
+	Add(chat models.Chat, personIds []uuid.UUID) (uuid.UUID, error)
 	AddNewUser(chatId uuid.UUID, userId uuid.UUID) error
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
-	Update(chatId uuid.UUID) error
+	Update(chat models.Chat) error
 	Delete(chatId uuid.UUID) error
 }
 
@@ -64,7 +65,7 @@ func (c *Service) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	return chats, nil
 }
 
-func (c *Service) Update(chatId uuid.UUID) error {
+func (c *Service) Update(chat models.Chat) error {
 	panic("implement me")
 }
 

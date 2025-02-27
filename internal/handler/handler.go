@@ -41,6 +41,7 @@ func NewHandler(log *slog.Logger, messengerService MessageService, chatService C
 func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
 	h.mux.HandleFunc("/chat/add", h.addChat).Methods("POST")
+	h.mux.HandleFunc("/chat/info", h.getInfoUserChats).Methods("GET")
 	h.mux.HandleFunc("/chat/persons/add", h.addNewUserChat).Methods("POST")
 	h.mux.HandleFunc("/send", h.send).Methods("POST")
 	go h.writeToClientsBroadcast()

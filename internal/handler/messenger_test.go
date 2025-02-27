@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -10,6 +11,7 @@ import (
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 	"messenger/internal/handler/mocks"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -154,6 +156,87 @@ func TestWsWriteReadForOneChat_Success(t *testing.T) {
 	err = conn2.ReadJSON(&readMsg)
 	require.NoError(t, err)
 	require.Equal(t, textMsg, readMsg.MessageText)
+}
+
+func TestWsGetInfoUserChats(t *testing.T) {
+	type args struct {
+		userId      uuid.UUID
+		page, count uint
+	}
+
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+
+	user1 := uuid.New()
+
+	mockMessengerService := mocks.NewMessageService(t)
+	mockChatService := mocks.NewChatService(t)
+
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
+	h.InitRoutes()
+
+	cases := []struct {
+		name            string
+		input           args
+		mockChatsReturn []domain.GetChat
+		mockChatsError  error
+		expectedChats   []domain.GetChat
+		expectedStatus  int
+	}{
+		{
+			name: "Возвращение одного чата",
+			input: args{
+				userId: user1,
+				page:   1,
+				count:  1,
+			},
+			mockChatsReturn: []domain.GetChat{
+				{
+					Name: "34 сквад",
+					LastMessage: models.Message{
+						PersonId:    user1,
+						MessageText: "Тест",
+					},
+				},
+			},
+			mockChatsError: nil,
+			expectedChats: []domain.GetChat{
+				{
+					Name: "34 сквад",
+					LastMessage: models.Message{
+						PersonId:    user1,
+						MessageText: "Тест",
+					},
+				},
+			},
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			mockChatService.On("GetInfoUserChats", tt.input.userId, tt.input.page, tt.input.count).Return(tt.mockChatsReturn, tt.mockChatsError)
+			url := fmt.Sprintf("%s/chat/info?userId=%v&page=%d&count=%d", server.URL, tt.input.userId, tt.input.page, tt.input.count)
+			resp, err := http.Get(url)
+			require.NoError(t, err)
+
+			defer resp.Body.Close()
+			require.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			var chats []domain.GetChat
+			decoder := json.NewDecoder(resp.Body)
+			err = decoder.Decode(&chats)
+			if err != nil {
+				t.Error(err)
+			}
+
+			require.Equal(t, tt.expectedChats, chats)
+		})
+	}
 }
 
 func TestWsHandler_Fail(t *testing.T) {}

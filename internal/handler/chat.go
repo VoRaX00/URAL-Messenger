@@ -136,14 +136,14 @@ func (h *Handler) getInfoUserChats(w http.ResponseWriter, r *http.Request) {
 
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil || page < 1 {
-		log.Error("Error with parsing page", slog.String("err", err.Error()))
+		log.Error("Error with parsing page")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	countChats, err := strconv.Atoi(r.URL.Query().Get("count"))
 	if err != nil || countChats < 1 {
-		log.Error("Error with parsing count", slog.String("err", err.Error()))
+		log.Error("Error with parsing count")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -157,12 +157,40 @@ func (h *Handler) getInfoUserChats(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info("got info about chats")
 
-	_, err = w.Write([]byte(fmt.Sprintf("chats: %v", chats)))
-	if err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(chats); err != nil {
 		log.Error("Error writing response", slog.String("err", err.Error()))
+	}
+}
+
+func (h *Handler) removeUser(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.removeUser"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	chatId, err := uuid.Parse(r.URL.Query().Get("chatId"))
+	if err != nil {
+		log.Error("Error with parsing chatId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	userId, err := uuid.Parse(r.URL.Query().Get("userId"))
+	if err != nil {
+		log.Error("Error with parsing userId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Info("removing user")
+	err = h.chatService.RemoveUser(chatId, userId)
+	if err != nil {
+		log.Error("Error with removing user", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
-	return
 }

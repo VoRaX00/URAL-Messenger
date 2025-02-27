@@ -83,6 +83,36 @@ func (_m *ChatService) Delete(chatId uuid.UUID) error {
 	return r0
 }
 
+// GetInfoUserChats provides a mock function with given fields: userId, page, count
+func (_m *ChatService) GetInfoUserChats(userId uuid.UUID, page uint, count uint) ([]domain.GetChat, error) {
+	ret := _m.Called(userId, page, count)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInfoUserChats")
+	}
+
+	var r0 []domain.GetChat
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uint, uint) ([]domain.GetChat, error)); ok {
+		return rf(userId, page, count)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uint, uint) []domain.GetChat); ok {
+		r0 = rf(userId, page, count)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.GetChat)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID, uint, uint) error); ok {
+		r1 = rf(userId, page, count)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUserChats provides a mock function with given fields: userId
 func (_m *ChatService) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	ret := _m.Called(userId)

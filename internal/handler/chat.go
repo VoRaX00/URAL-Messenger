@@ -194,3 +194,54 @@ func (h *Handler) removeUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.update"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	var chat models.Chat
+	err := json.NewDecoder(r.Body).Decode(&chat)
+	if err != nil {
+		log.Error("Error with parsing chat", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Info("updating chat", slog.String("chatId", chat.Id.String()))
+	err = h.chatService.Update(chat)
+	if err != nil {
+		log.Error("Error with updating chat", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Info("successfully updated chat", slog.String("chatId", chat.Id.String()))
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.delete"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	chatId, err := uuid.Parse(r.URL.Query().Get("chatId"))
+	if err != nil {
+		log.Error("Error with parsing chatId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Info("deleting chat", slog.String("chatId", chatId.String()))
+	err = h.chatService.Delete(chatId)
+	if err != nil {
+		log.Error("Error with deleting chat", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Info("successfully deleted chat", slog.String("chatId", chatId.String()))
+
+	w.WriteHeader(http.StatusOK)
+}

@@ -7,6 +7,8 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
+	models "messenger/internal/domain/models"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -129,17 +131,17 @@ func (_m *ChatService) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return r0
 }
 
-// Update provides a mock function with given fields: chatId
-func (_m *ChatService) Update(chatId uuid.UUID) error {
-	ret := _m.Called(chatId)
+// Update provides a mock function with given fields: chat
+func (_m *ChatService) Update(chat models.Chat) error {
+	ret := _m.Called(chat)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = rf(chatId)
+	if rf, ok := ret.Get(0).(func(models.Chat) error); ok {
+		r0 = rf(chat)
 	} else {
 		r0 = ret.Error(0)
 	}

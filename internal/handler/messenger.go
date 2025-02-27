@@ -54,11 +54,11 @@ func (h *Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mu.Unlock()
 
-	go h.Conn(conn, userID)
+	go h.conn(conn, userID)
 }
 
-func (h *Handler) Conn(conn *websocket.Conn, userId uuid.UUID) {
-	const op = "handler.Conn"
+func (h *Handler) conn(conn *websocket.Conn, userId uuid.UUID) {
+	const op = "handler.conn"
 	log := h.log.With(
 		slog.String("op", op),
 	)

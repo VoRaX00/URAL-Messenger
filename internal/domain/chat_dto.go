@@ -1,6 +1,9 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"messenger/internal/domain/models"
+)
 
 type AddChat struct {
 	PersonIds []uuid.UUID `json:"personIds"`
@@ -9,4 +12,9 @@ type AddChat struct {
 
 type UpdateChat struct {
 	Name string `json:"name"`
+}
+
+type GetChat struct {
+	Name        string         `json:"name"`
+	LastMessage models.Message `json:"lastMessage"`
 }

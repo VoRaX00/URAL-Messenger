@@ -9,6 +9,7 @@ import (
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 	"net/http"
+	"strconv"
 )
 
 //go:generate mockery --name=ChatService --output=./mocks --case=underscore
@@ -16,6 +17,7 @@ type ChatService interface {
 	Add(chat domain.AddChat) (uuid.UUID, error)
 	AddNewUser(chatId uuid.UUID, userId uuid.UUID) error
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
+	GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error)
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 	Update(chat models.Chat) error
 	Delete(chatId uuid.UUID) error
@@ -78,14 +80,14 @@ func (h *Handler) addNewUserChat(w http.ResponseWriter, r *http.Request) {
 		slog.String("op", op),
 	)
 
-	chatId, err := uuid.Parse(r.Header.Get("chatId"))
+	chatId, err := uuid.Parse(r.URL.Query().Get("chatId"))
 	if err != nil {
 		log.Error("Error with parsing chatId", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	personId, err := uuid.Parse(r.Header.Get("personId"))
+	personId, err := uuid.Parse(r.URL.Query().Get("personId"))
 	if err != nil {
 		log.Error("Error with parsing personId", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
@@ -117,4 +119,50 @@ func (h *Handler) getUserChats(userID uuid.UUID) ([]uuid.UUID, error) {
 	}
 	log.Info("got chats for user")
 	return chats, nil
+}
+
+func (h *Handler) getInfoUserChats(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.getInfoUserChats"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	userId, err := uuid.Parse(r.URL.Query().Get("userId"))
+	if err != nil {
+		log.Error("Error with parsing userId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		log.Error("Error with parsing page", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	countChats, err := strconv.Atoi(r.URL.Query().Get("count"))
+	if err != nil || countChats < 1 {
+		log.Error("Error with parsing count", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Info("getting info about chats")
+	chats, err := h.chatService.GetInfoUserChats(userId, uint(page), uint(countChats))
+	if err != nil {
+		log.Error("Error with getting info", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Info("got info about chats")
+
+	_, err = w.Write([]byte(fmt.Sprintf("chats: %v", chats)))
+	if err != nil {
+		log.Error("Error writing response", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	return
 }

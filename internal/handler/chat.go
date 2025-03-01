@@ -20,7 +20,7 @@ type ChatService interface {
 	GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error)
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 	Update(chat models.Chat) error
-	Delete(chatId uuid.UUID) error
+	Delete(chatId, userId uuid.UUID) error
 }
 
 func (h *Handler) addChat(w http.ResponseWriter, r *http.Request) {
@@ -234,8 +234,15 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userId, err := uuid.Parse(r.URL.Query().Get("userId"))
+	if err != nil {
+		log.Error("Error with parsing userId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	log.Info("deleting chat", slog.String("chatId", chatId.String()))
-	err = h.chatService.Delete(chatId)
+	err = h.chatService.Delete(chatId, userId)
 	if err != nil {
 		log.Error("Error with deleting chat", slog.String("err", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)

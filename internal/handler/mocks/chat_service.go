@@ -65,17 +65,17 @@ func (_m *ChatService) AddNewUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return r0
 }
 
-// Delete provides a mock function with given fields: chatId
-func (_m *ChatService) Delete(chatId uuid.UUID) error {
-	ret := _m.Called(chatId)
+// Delete provides a mock function with given fields: chatId, userId
+func (_m *ChatService) Delete(chatId uuid.UUID, userId uuid.UUID) error {
+	ret := _m.Called(chatId, userId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = rf(chatId)
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(chatId, userId)
 	} else {
 		r0 = ret.Error(0)
 	}

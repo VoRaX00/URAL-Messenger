@@ -94,6 +94,10 @@ func (c *Service) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return nil
 }
 
+func (c *Service) GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error) {
+	panic("implement me")
+}
+
 func (c *Service) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	const op = "services.messenger.GetUserChats"
 	log := c.log.With(
@@ -128,7 +132,7 @@ func (c *Service) Update(chat models.Chat) error {
 	return nil
 }
 
-func (c *Service) Delete(chatId uuid.UUID) error {
+func (c *Service) Delete(chatId, userId uuid.UUID) error {
 	const op = "services.messenger.Delete"
 	log := c.log.With(
 		slog.String("op", op),

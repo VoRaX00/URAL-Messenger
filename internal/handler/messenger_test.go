@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -168,7 +169,7 @@ func TestWsGetInfoUserChats(t *testing.T) {
 		Level: slog.LevelDebug,
 	})
 
-	user1 := uuid.New()
+	userId := uuid.New()
 
 	mockMessengerService := mocks.NewMessageService(t)
 	mockChatService := mocks.NewChatService(t)
@@ -187,7 +188,7 @@ func TestWsGetInfoUserChats(t *testing.T) {
 		{
 			name: "Возвращение одного чата",
 			input: args{
-				userId: user1,
+				userId: userId,
 				page:   1,
 				count:  1,
 			},
@@ -195,7 +196,7 @@ func TestWsGetInfoUserChats(t *testing.T) {
 				{
 					Name: "34 сквад",
 					LastMessage: models.Message{
-						PersonId:    user1,
+						PersonId:    userId,
 						MessageText: "Тест",
 					},
 				},
@@ -205,7 +206,7 @@ func TestWsGetInfoUserChats(t *testing.T) {
 				{
 					Name: "34 сквад",
 					LastMessage: models.Message{
-						PersonId:    user1,
+						PersonId:    userId,
 						MessageText: "Тест",
 					},
 				},
@@ -239,4 +240,115 @@ func TestWsGetInfoUserChats(t *testing.T) {
 	}
 }
 
-func TestWsHandler_Fail(t *testing.T) {}
+func TestWsUpdate(t *testing.T) {
+	type args struct {
+		chat models.Chat
+	}
+
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+
+	mockMessengerService := mocks.NewMessageService(t)
+	mockChatService := mocks.NewChatService(t)
+
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
+	h.InitRoutes()
+
+	cases := []struct {
+		name           string
+		input          args
+		mockChatsError error
+		expectedStatus int
+	}{
+		{
+			name: "Успешное обновление чата",
+			input: args{
+				chat: models.Chat{
+					Id:   uuid.New(),
+					Name: "Test",
+				},
+			},
+			mockChatsError: nil,
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			mockChatService.On("Update", mock.AnythingOfType("models.Chat")).Return(tt.mockChatsError)
+
+			body, err := json.Marshal(tt.input.chat)
+			if err != nil {
+				t.Error(err)
+			}
+
+			url := fmt.Sprintf("%s/chat", server.URL)
+
+			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(body))
+			if err != nil {
+				t.Error(err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedStatus, resp.StatusCode)
+		})
+	}
+}
+
+func TestWsDelete(t *testing.T) {
+	type args struct {
+		chatId uuid.UUID
+		userId uuid.UUID
+	}
+
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+
+	mockMessengerService := mocks.NewMessageService(t)
+	mockChatService := mocks.NewChatService(t)
+
+	h := NewHandler(slog.New(logHandler), mockMessengerService, mockChatService)
+	h.InitRoutes()
+
+	cases := []struct {
+		name           string
+		input          args
+		mockChatsError error
+		expectedStatus int
+	}{
+		{
+			name: "Успешное удаление",
+			input: args{
+				chatId: uuid.New(),
+				userId: uuid.New(),
+			},
+			mockChatsError: nil,
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			mockChatService.On("Delete", mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("uuid.UUID")).Return(tt.mockChatsError)
+
+			url := fmt.Sprintf("%s/chat?chatId=%v&userId=%v", server.URL, tt.input.chatId, tt.input.userId)
+			req, err := http.NewRequest("DELETE", url, nil)
+			if err != nil {
+				t.Error(err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedStatus, resp.StatusCode)
+		})
+	}
+}

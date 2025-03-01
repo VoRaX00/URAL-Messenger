@@ -1,11 +1,14 @@
 package postgres
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"messenger/internal/domain/models"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type ChatRepository struct {
 	db *sqlx.DB
@@ -145,7 +148,7 @@ func (c *ChatRepository) Update(chat models.Chat) error {
 	return nil
 }
 
-func (c *ChatRepository) Delete(chatId uuid.UUID) error {
+func (c *ChatRepository) Delete(chatId, userId uuid.UUID) error {
 	const op = "postgres.ChatRepository.Delete"
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -160,7 +163,18 @@ func (c *ChatRepository) Delete(chatId uuid.UUID) error {
 		_ = tx.Commit()
 	}()
 
-	query := `DELETE FROM chats WHERE id = $1`
+	var exists bool
+	query := `SELECT EXISTS (SELECT 1 FROM public.chats_persons WHERE chat_id = $1 AND person_id = $2)`
+	err = tx.QueryRow(query, chatId, userId).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if !exists {
+		return fmt.Errorf("%s: %w", op, ErrNotFound)
+	}
+
+	query = `DELETE FROM chats WHERE id = $1`
 	_, err = tx.Exec(query, chatId)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)

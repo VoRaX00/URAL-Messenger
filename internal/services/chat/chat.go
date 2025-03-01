@@ -21,7 +21,7 @@ type Repository interface {
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
 	Update(chat models.Chat) error
-	Delete(chatId uuid.UUID) error
+	Delete(chatId, userId uuid.UUID) error
 }
 
 type Service struct {
@@ -139,7 +139,7 @@ func (c *Service) Delete(chatId, userId uuid.UUID) error {
 	)
 
 	log.Info("deleting chat")
-	err := c.repository.Delete(chatId)
+	err := c.repository.Delete(chatId, userId)
 	if err != nil {
 		log.Error("error with deleting chat:", slog.String("err", err.Error()))
 		return fmt.Errorf("%s: %w", op, err)

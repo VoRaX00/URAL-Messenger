@@ -3,9 +3,11 @@
 package mocks
 
 import (
-	models "messenger/internal/domain/models"
+	domain "messenger/internal/domain"
 
 	mock "github.com/stretchr/testify/mock"
+
+	models "messenger/internal/domain/models"
 
 	uuid "github.com/google/uuid"
 )
@@ -63,22 +65,80 @@ func (_m *Repository) AddNewUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return r0
 }
 
-// Delete provides a mock function with given fields: chatId
-func (_m *Repository) Delete(chatId uuid.UUID) error {
-	ret := _m.Called(chatId)
+// Delete provides a mock function with given fields: chatId, userId
+func (_m *Repository) Delete(chatId uuid.UUID, userId uuid.UUID) error {
+	ret := _m.Called(chatId, userId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = rf(chatId)
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(chatId, userId)
 	} else {
 		r0 = ret.Error(0)
 	}
 
 	return r0
+}
+
+// GetChatIds provides a mock function with given fields: userId, offset, limit
+func (_m *Repository) GetChatIds(userId uuid.UUID, offset uint, limit uint) ([]uuid.UUID, error) {
+	ret := _m.Called(userId, offset, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetChatIds")
+	}
+
+	var r0 []uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uint, uint) ([]uuid.UUID, error)); ok {
+		return rf(userId, offset, limit)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID, uint, uint) []uuid.UUID); ok {
+		r0 = rf(userId, offset, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID, uint, uint) error); ok {
+		r1 = rf(userId, offset, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetInfoChat provides a mock function with given fields: chatId
+func (_m *Repository) GetInfoChat(chatId uuid.UUID) (domain.GetChat, error) {
+	ret := _m.Called(chatId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInfoChat")
+	}
+
+	var r0 domain.GetChat
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) (domain.GetChat, error)); ok {
+		return rf(chatId)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) domain.GetChat); ok {
+		r0 = rf(chatId)
+	} else {
+		r0 = ret.Get(0).(domain.GetChat)
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(chatId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetUserChats provides a mock function with given fields: userId

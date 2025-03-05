@@ -1,8 +1,10 @@
 package chat
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
@@ -97,7 +99,6 @@ func (c *Service) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return nil
 }
 
-// TODO: иногда падает deadlock, разобраться и понять почему так происходит
 func (c *Service) GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error) {
 	const op = "services.messenger.GetInfoUserChats"
 	log := c.log.With(
@@ -113,37 +114,42 @@ func (c *Service) GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain
 
 	chats := make([]domain.GetChat, len(chatsIds))
 
-	wg := sync.WaitGroup{}
-	quit := make(chan error)
+	group, ctx := errgroup.WithContext(context.Background())
 	mu := sync.Mutex{}
 
-	for _, chatId := range chatsIds {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			info, err := c.repository.GetInfoChat(chatId)
+	for i, chatId := range chatsIds {
+		group.Go(func() error {
+			info, err := c.getInfoChat(ctx, chatId)
+			if err != nil {
+				return err
+			}
 
 			mu.Lock()
-			chats = append(chats, info)
-			if err != nil {
-				quit <- err
-			}
+			chats[i] = info
 			mu.Unlock()
-		}()
+			return nil
+		})
 	}
 
-	select {
-	case err = <-quit:
+	if err = group.Wait(); err != nil {
 		log.Error("Error with getting user's chats:", slog.String("err", err.Error()))
 		return nil, fmt.Errorf("%s: %w", op, err)
-	default:
-		wg.Wait()
 	}
-
 	log.Info("successfully got user's chats")
-
 	return chats, nil
+}
+
+func (c *Service) getInfoChat(ctx context.Context, chatId uuid.UUID) (domain.GetChat, error) {
+	select {
+	case <-ctx.Done():
+		return domain.GetChat{}, ctx.Err()
+	default:
+		info, err := c.repository.GetInfoChat(chatId)
+		if err != nil {
+			return domain.GetChat{}, err
+		}
+		return info, nil
+	}
 }
 
 func (c *Service) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {

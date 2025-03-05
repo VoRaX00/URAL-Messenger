@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 )
 
@@ -52,7 +53,7 @@ func (c *ChatRepository) Add(chat models.Chat, personIds []uuid.UUID) (uuid.UUID
 	return chat.Id, nil
 }
 
-func (c *ChatRepository) AddNewUser(chatId uuid.UUID, userId uuid.UUID) error {
+func (c *ChatRepository) AddNewUser(chatId, userId uuid.UUID) error {
 	const op = "postgres.ChatRepository.AddNewUser"
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -83,7 +84,7 @@ func (c *ChatRepository) AddNewUser(chatId uuid.UUID, userId uuid.UUID) error {
 	return nil
 }
 
-func (c *ChatRepository) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
+func (c *ChatRepository) RemoveUser(chatId, userId uuid.UUID) error {
 	const op = "postgres.ChatRepository.RemoveUser"
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -107,7 +108,7 @@ func (c *ChatRepository) RemoveUser(chatId uuid.UUID, userId uuid.UUID) error {
 }
 
 func (c *ChatRepository) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
-	const op = `ChatRepository.GetUserChats`
+	const op = `postgres.ChatRepository.GetUserChats`
 	query := `SELECT chat_id FROM chats_persons WHERE person_id = $1`
 
 	var chats []uuid.UUID
@@ -116,6 +117,65 @@ func (c *ChatRepository) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return chats, nil
+}
+
+func (c *ChatRepository) GetChatIds(userId uuid.UUID, offset, limit uint) ([]uuid.UUID, error) {
+	const op = `postgres.ChatRepository.GetChatIds`
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		_ = tx.Commit()
+	}()
+
+	var chats []uuid.UUID
+	query := `SELECT chat_id FROM chats_persons WHERE person_id = $1 LIMIT $2 OFFSET $3`
+	err = tx.Select(&chats, query, userId, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return chats, nil
+}
+
+func (c *ChatRepository) GetInfoChat(chatId uuid.UUID) (domain.GetChat, error) {
+	const op = `postgres.ChatRepository.GetInfoUserChats`
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return domain.GetChat{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+		_ = tx.Commit()
+	}()
+
+	var chat domain.GetChat
+	query := `SELECT name FROM chats WHERE id = $1`
+	err = tx.QueryRow(query, chatId).Scan(&chat.Name)
+	if err != nil {
+		return domain.GetChat{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	msg, err := c.getLastMessage(chatId)
+	if err != nil {
+		return domain.GetChat{}, fmt.Errorf("%s: %w", op, err)
+	}
+	chat.LastMessage = msg
+	return chat, nil
+}
+
+func (c *ChatRepository) getLastMessage(chatId uuid.UUID) (models.Message, error) {
+	panic("implement me")
 }
 
 func (c *ChatRepository) Update(chat models.Chat) error {

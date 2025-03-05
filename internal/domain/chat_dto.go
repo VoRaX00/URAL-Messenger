@@ -15,6 +15,6 @@ type UpdateChat struct {
 }
 
 type GetChat struct {
-	Name        string         `json:"name"`
+	Name        string         `json:"name" db:"name"`
 	LastMessage models.Message `json:"lastMessage"`
 }

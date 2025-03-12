@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"messenger/internal/handler"
 	"net/http"
 	"time"
 )
@@ -21,9 +20,7 @@ type wsSrv struct {
 	log *slog.Logger
 }
 
-func New(log *slog.Logger, h *handler.Handler, config Config) WSServer {
-	h.InitRoutes()
-
+func New(log *slog.Logger, h http.Handler, config Config) WSServer {
 	return &wsSrv{
 		srv: &http.Server{
 			Addr:         config.Addr,

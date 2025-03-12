@@ -19,6 +19,7 @@ type ChatService interface {
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
 	GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error)
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
+	GetPersons(chatId uuid.UUID) ([]uuid.UUID, error)
 	Update(chat models.Chat) error
 	Delete(chatId, userId uuid.UUID) error
 }
@@ -162,6 +163,32 @@ func (h *Handler) getInfoUserChats(w http.ResponseWriter, r *http.Request) {
 	if err = json.NewEncoder(w).Encode(chats); err != nil {
 		log.Error("Error writing response", slog.String("err", err.Error()))
 	}
+}
+
+func (h *Handler) getPersons(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.getPersons"
+	log := h.log.With(
+		slog.String("op", op),
+	)
+
+	chatId, err := uuid.Parse(r.URL.Query().Get("chatId"))
+	if err != nil {
+		log.Error("Error with parsing chatId", slog.String("err", err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Info("getting chats for user")
+	_, err = h.chatService.GetPersons(chatId)
+	if err != nil {
+		log.Error("Error with getting persons", slog.String("err", err.Error()))
+	}
+	log.Info("got chats for user")
+
+	// TODO: написать логику, для взаимодействия с сервисом Person, для получения подробной информации о юзере отправляя ID
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) removeUser(w http.ResponseWriter, r *http.Request) {

@@ -152,6 +152,10 @@ func (c *Service) getInfoChat(ctx context.Context, chatId uuid.UUID) (domain.Get
 	}
 }
 
+func (c *Service) GetPersons(chatId uuid.UUID) ([]uuid.UUID, error) {
+	panic("implement me")
+}
+
 func (c *Service) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	const op = "services.messenger.GetUserChats"
 	log := c.log.With(

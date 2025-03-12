@@ -42,10 +42,11 @@ func (h *Handler) InitRoutes() {
 	h.mux.HandleFunc("/ws", h.wsHandler)
 	h.mux.HandleFunc("/chat/add", h.addChat).Methods(http.MethodPost)
 	h.mux.HandleFunc("/chat/info", h.getInfoUserChats).Methods(http.MethodGet)
-	h.mux.HandleFunc("chat/users/remove", h.removeUser).Methods(http.MethodDelete)
+	h.mux.HandleFunc("/chat/users/remove", h.removeUser).Methods(http.MethodDelete)
 	h.mux.HandleFunc("/chat", h.update).Methods(http.MethodPut)
 	h.mux.HandleFunc("/chat", h.delete).Methods(http.MethodDelete)
 	h.mux.HandleFunc("/chat/persons/add", h.addNewUserChat).Methods(http.MethodPost)
+	h.mux.HandleFunc("/chat/persons", h.getPersons).Methods(http.MethodGet)
 	h.mux.HandleFunc("/send", h.send).Methods(http.MethodPost)
 	go h.writeToClientsBroadcast()
 }

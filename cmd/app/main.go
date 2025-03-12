@@ -38,7 +38,7 @@ func main() {
 	defer pgClient.Close()
 	defer redisClient.Close()
 
-	application := app.New(log, server, pgClient, redisClient)
+	application := app.New(log, server)
 	if err := application.Start(); err != nil {
 		log.Error("error starting application", err)
 		os.Exit(1)

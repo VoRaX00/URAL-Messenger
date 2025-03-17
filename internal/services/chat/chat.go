@@ -2,6 +2,8 @@ package chat
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
@@ -9,6 +11,7 @@ import (
 	"messenger/internal/domain"
 	"messenger/internal/domain/models"
 	"messenger/pkg/mapper"
+	"net/http"
 	"sync"
 )
 
@@ -152,7 +155,7 @@ func (c *Service) getInfoChat(ctx context.Context, chatId uuid.UUID) (domain.Get
 	}
 }
 
-func (c *Service) GetPersons(chatId uuid.UUID) ([]uuid.UUID, error) {
+func (c *Service) GetUsers(chatId uuid.UUID) ([]uuid.UUID, error) {
 	panic("implement me")
 }
 
@@ -171,6 +174,34 @@ func (c *Service) GetUserChats(userId uuid.UUID) ([]uuid.UUID, error) {
 	log.Info("chats received")
 
 	return chats, nil
+}
+
+func (c *Service) GetUserInfo(id uuid.UUID) (domain.UserInfo, error) {
+	const op = "services.messenger.GetUserInfo"
+	log := c.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("getting person info")
+	resp, err := http.Get(fmt.Sprintf("http://localhost:8080/api/v1/%v", id))
+	if err != nil {
+		log.Error("error getting person info", slog.String("err", err.Error()))
+		return domain.UserInfo{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Error("error getting person info", slog.String("ok", resp.Status))
+		return domain.UserInfo{}, fmt.Errorf("%s: %w", op, errors.New(resp.Status))
+	}
+
+	var user domain.UserInfo
+	err = json.NewDecoder(resp.Body).Decode(&user)
+	if err != nil {
+		log.Error("error getting person info", slog.String("err", err.Error()))
+		return domain.UserInfo{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return user, nil
 }
 
 func (c *Service) Update(chat models.Chat) error {

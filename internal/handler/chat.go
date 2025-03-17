@@ -19,7 +19,8 @@ type ChatService interface {
 	RemoveUser(chatId uuid.UUID, userId uuid.UUID) error
 	GetInfoUserChats(userId uuid.UUID, page, count uint) ([]domain.GetChat, error)
 	GetUserChats(userId uuid.UUID) ([]uuid.UUID, error)
-	GetPersons(chatId uuid.UUID) ([]uuid.UUID, error)
+	GetUsers(chatId uuid.UUID) ([]uuid.UUID, error)
+	GetUserInfo(id uuid.UUID) (domain.UserInfo, error)
 	Update(chat models.Chat) error
 	Delete(chatId, userId uuid.UUID) error
 }
@@ -179,13 +180,23 @@ func (h *Handler) getPersons(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("getting chats for user")
-	_, err = h.chatService.GetPersons(chatId)
+	ids, err := h.chatService.GetUsers(chatId)
 	if err != nil {
 		log.Error("Error with getting persons", slog.String("err", err.Error()))
 	}
 	log.Info("got chats for user")
 
-	// TODO: написать логику, для взаимодействия с сервисом Person, для получения подробной информации о юзере отправляя ID
+	log.Info("getting info about user")
+	users := make([]domain.UserInfo, len(ids))
+	for i, id := range ids {
+		users[i], err = h.chatService.GetUserInfo(id)
+		if err != nil {
+			log.Error("Error with getting info", slog.String("err", err.Error()))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+	log.Info("got info about user")
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
